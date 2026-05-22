@@ -132,6 +132,16 @@ export async function logAccess(entry: import('./types').AccessLogEntry) {
 
 export async function isEmailWhitelisted(email: string): Promise<boolean> {
   const e = email.trim().toLowerCase();
+
+  // Emails sempre liberados via variável de ambiente (separados por vírgula).
+  // Útil para criar contas de demonstração / equipe sem ter que adicionar pelo painel.
+  const envAllowed = (process.env.DEFAULT_ALLOWED_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (envAllowed.includes(e)) return true;
+
+  // Liberados pelo painel administrativo
   const db = await getDB();
   return db.whitelist.some((w) => w.email.trim().toLowerCase() === e);
 }
