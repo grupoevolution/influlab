@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/Button';
 import { CircuitDecor } from '@/components/brand/CircuitDecor';
 import {
   MAX_VIDEOS_PER_DAY,
+  RPV,
   projectMonthlyRevenue,
   useGoal,
-  videosNeededForGoal,
 } from '@/lib/goal-store';
 import { formatCurrency } from '@/lib/utils';
 
@@ -20,17 +20,20 @@ const GOAL_MIN = 500;
 const GOAL_MAX = 30000;
 const GOAL_STEP = 250;
 
+// Goal mínima/máxima coerente com 1..30 vídeos/dia (RPV * dias)
+const GOAL_FROM_VIDEOS = (videos: number) => Math.max(GOAL_MIN, Math.round((videos * 30 * RPV) / GOAL_STEP) * GOAL_STEP);
+const VIDEOS_FROM_GOAL = (goal: number) => Math.min(MAX_VIDEOS_PER_DAY, Math.max(1, Math.ceil(goal / RPV / 30)));
+
 export default function CalculadoraPage() {
   const router = useRouter();
   const { goal, setGoal } = useGoal();
 
-  // Estados locais totalmente independentes
   const [videosPerDay, setVideosPerDay] = useState(2);
   const [monthlyGoal, setMonthlyGoal] = useState(3000);
   const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // Carrega os valores do storage apenas uma vez (no mount)
+  // Carrega valores do storage uma única vez
   useEffect(() => {
     setVideosPerDay(goal.videosPerDay);
     setMonthlyGoal(goal.monthlyGoal);
@@ -38,9 +41,19 @@ export default function CalculadoraPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Atualizar meta: ajusta vídeos/dia automaticamente
+  const onGoalChange = (newGoal: number) => {
+    setMonthlyGoal(newGoal);
+    setVideosPerDay(VIDEOS_FROM_GOAL(newGoal));
+  };
+
+  // Atualizar vídeos/dia: ajusta meta automaticamente
+  const onVideosChange = (newVideos: number) => {
+    setVideosPerDay(newVideos);
+    setMonthlyGoal(GOAL_FROM_VIDEOS(newVideos));
+  };
+
   const projection = useMemo(() => projectMonthlyRevenue(videosPerDay), [videosPerDay]);
-  const needed = useMemo(() => videosNeededForGoal(monthlyGoal), [monthlyGoal]);
-  const onTrack = projection.realistic >= monthlyGoal;
 
   const save = () => {
     setGoal({ videosPerDay, monthlyGoal });
@@ -48,7 +61,7 @@ export default function CalculadoraPage() {
     setTimeout(() => router.push('/app/agenda'), 700);
   };
 
-  // Calcula posição visual do slider em %
+  // Posições visuais dos sliders
   const goalPct = ((monthlyGoal - GOAL_MIN) / (GOAL_MAX - GOAL_MIN)) * 100;
   const vpdPct = ((videosPerDay - 1) / (MAX_VIDEOS_PER_DAY - 1)) * 100;
 
@@ -89,7 +102,7 @@ export default function CalculadoraPage() {
                   max={GOAL_MAX}
                   step={GOAL_STEP}
                   value={monthlyGoal}
-                  onChange={(e) => setMonthlyGoal(Number(e.target.value))}
+                  onChange={(e) => onGoalChange(Number(e.target.value))}
                   className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-violet-500"
                   style={{
                     background: `linear-gradient(to right, #22D3EE 0%, #7C3AED ${goalPct}%, rgb(var(--c-bg-elevated)) ${goalPct}%, rgb(var(--c-bg-elevated)) 100%)`,
@@ -123,7 +136,7 @@ export default function CalculadoraPage() {
                   max={MAX_VIDEOS_PER_DAY}
                   step={1}
                   value={videosPerDay}
-                  onChange={(e) => setVideosPerDay(Number(e.target.value))}
+                  onChange={(e) => onVideosChange(Number(e.target.value))}
                   className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-cyan-400"
                   style={{
                     background: `linear-gradient(to right, #7C3AED 0%, #22D3EE ${vpdPct}%, rgb(var(--c-bg-elevated)) ${vpdPct}%, rgb(var(--c-bg-elevated)) 100%)`,
@@ -180,22 +193,10 @@ export default function CalculadoraPage() {
               </div>
 
               {/* Insight */}
-              <div className={`flex items-start gap-2.5 p-3 rounded-xl mb-5 border ${
-                onTrack
-                  ? 'bg-emerald-500/10 border-emerald-400/30'
-                  : 'bg-amber-500/10 border-amber-400/30'
-              }`}>
-                <TrendingUp size={16} className={onTrack ? 'text-emerald-300 shrink-0 mt-0.5' : 'text-amber-300 shrink-0 mt-0.5'} />
+              <div className="flex items-start gap-2.5 p-3 rounded-xl mb-5 border bg-emerald-500/10 border-emerald-400/30">
+                <TrendingUp size={16} className="text-emerald-300 shrink-0 mt-0.5" />
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  {onTrack ? (
-                    <>
-                      Com <strong className="text-text-primary">{videosPerDay} vídeo{videosPerDay > 1 ? 's' : ''}/dia</strong>, você passa da meta de <strong className="text-emerald-300">{formatCurrency(monthlyGoal)}</strong>. Sua agenda vai usar isso como base.
-                    </>
-                  ) : (
-                    <>
-                      Pra bater <strong className="text-text-primary">{formatCurrency(monthlyGoal)}</strong>, você precisa <strong className="text-amber-300">{needed} vídeo{needed > 1 ? 's' : ''}/dia</strong>. Ajuste o slider acima.
-                    </>
-                  )}
+                  Com <strong className="text-text-primary">{videosPerDay} vídeo{videosPerDay > 1 ? 's' : ''}/dia</strong>, sua projeção é de <strong className="text-emerald-300">{formatCurrency(projection.realistic)}/mês</strong>. Sua agenda usa isso como base.
                 </p>
               </div>
 

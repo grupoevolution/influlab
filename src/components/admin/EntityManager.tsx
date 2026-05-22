@@ -1,8 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit3, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Edit3, ImageIcon, Loader2, Plus, Save, Search, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -14,7 +14,7 @@ export type FieldDef = {
   name: string;
   label: string;
   type: FieldType;
-  options?: { value: string; label: string }[]; // para select
+  options?: { value: string; label: string }[];
   placeholder?: string;
   required?: boolean;
   helper?: string;
@@ -22,11 +22,11 @@ export type FieldDef = {
 };
 
 export type EntityManagerProps<T extends { id: string }> = {
-  endpoint: string; // ex: /api/admin/products
+  endpoint: string;
   fields: FieldDef[];
-  primaryField: keyof T;          // campo exibido como título do card
-  imageField?: keyof T;           // campo de imagem para thumb
-  secondaryFields?: (keyof T)[];  // campos extras exibidos no card
+  primaryField: keyof T;
+  imageField?: keyof T;
+  secondaryFields?: (keyof T)[];
   emptyState?: string;
 };
 
@@ -42,6 +42,7 @@ export function EntityManager<T extends { id: string } & Record<string, unknown>
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<T | null>(null);
   const [creating, setCreating] = useState(false);
+  const [query, setQuery] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -65,67 +66,115 @@ export function EntityManager<T extends { id: string } & Record<string, unknown>
     if (res.ok) load();
   };
 
+  const filtered = useMemo(() => {
+    if (!query.trim()) return items;
+    const q = query.toLowerCase();
+    return items.filter((it) => String(it[primaryField] ?? '').toLowerCase().includes(q));
+  }, [items, query, primaryField]);
+
   return (
     <div className="px-4 md:px-8 py-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-text-muted">{items.length} {items.length === 1 ? 'item' : 'itens'}</p>
+      <div className="max-w-7xl mx-auto">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm">
+            <div className="relative w-full">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full h-10 pl-9 pr-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+              />
+            </div>
+            <Badge className="text-xs whitespace-nowrap">
+              {filtered.length} {filtered.length === 1 ? 'item' : 'itens'}
+            </Badge>
+          </div>
           <Button leftIcon={<Plus size={16} />} onClick={() => setCreating(true)}>
             Novo
           </Button>
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 py-10 justify-center text-text-muted">
+          <div className="flex items-center gap-2 py-16 justify-center text-text-muted">
             <Loader2 size={16} className="animate-spin" /> Carregando...
           </div>
-        ) : items.length === 0 ? (
-          <Card variant="glass" className="p-8 text-center">
-            <p className="text-sm text-text-muted">{emptyState ?? 'Nenhum item cadastrado.'}</p>
+        ) : filtered.length === 0 ? (
+          <Card variant="glass" className="p-12 text-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-bg-elevated border border-border flex items-center justify-center">
+              <ImageIcon size={20} className="text-text-muted" />
+            </div>
+            <p className="text-sm text-text-muted mb-4">
+              {query ? 'Nenhum item encontrado para essa busca.' : emptyState ?? 'Nenhum item cadastrado.'}
+            </p>
+            {!query && (
+              <Button onClick={() => setCreating(true)} leftIcon={<Plus size={14} />}>
+                Criar primeiro
+              </Button>
+            )}
           </Card>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {items.map((item) => (
-              <Card key={item.id} variant="glass" className="p-3.5">
-                <div className="flex items-start gap-3">
-                  {imageField && item[imageField] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={String(item[imageField])}
-                      alt=""
-                      className="h-16 w-16 rounded-lg object-cover shrink-0 bg-bg-elevated"
-                    />
-                  ) : null}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">
-                      {String(item[primaryField] ?? '—')}
-                    </h3>
-                    {secondaryFields && (
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {secondaryFields.map((f) => (
-                          <Badge key={String(f)} className="text-[10px] px-1.5 py-0">
-                            {String(item[f] ?? '')}
-                          </Badge>
-                        ))}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((item, i) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.02 }}
+              >
+                <Card variant="glass" hoverable className="overflow-hidden group">
+                  <div className="flex items-stretch">
+                    {imageField && item[imageField] ? (
+                      <div className="relative w-24 h-24 shrink-0 bg-bg-elevated overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={String(item[imageField])}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
                       </div>
-                    )}
+                    ) : null}
+
+                    <div className="flex-1 min-w-0 p-3.5">
+                      <h3 className="font-semibold text-sm leading-tight mb-1.5 line-clamp-2">
+                        {String(item[primaryField] ?? '—')}
+                      </h3>
+                      {secondaryFields && (
+                        <div className="flex flex-wrap gap-1">
+                          {secondaryFields.map((f) => {
+                            const v = item[f];
+                            if (!v) return null;
+                            return (
+                              <Badge key={String(f)} className="text-[9px] px-1.5 py-0">
+                                {String(v)}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col border-l border-border-subtle">
+                      <button
+                        onClick={() => setEditing(item)}
+                        className="flex-1 px-3 text-text-muted hover:text-brand-cyan-300 hover:bg-brand-cyan-500/5 transition"
+                        title="Editar"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <div className="h-px bg-border-subtle" />
+                      <button
+                        onClick={() => remove(item.id)}
+                        className="flex-1 px-3 text-text-muted hover:text-red-400 hover:bg-red-500/5 transition"
+                        title="Remover"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => setEditing(item)}
-                      className="p-2 rounded-lg text-text-muted hover:text-brand-cyan-300 hover:bg-white/5"
-                    >
-                      <Edit3 size={14} />
-                    </button>
-                    <button
-                      onClick={() => remove(item.id)}
-                      className="p-2 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
             ))}
           </div>
         )}
@@ -171,9 +220,7 @@ function EntityForm<T extends { id: string } & Record<string, unknown>>({
   );
   const [saving, setSaving] = useState(false);
 
-  const set = (name: string, value: unknown) => {
-    setValues((v) => ({ ...v, [name]: value }));
-  };
+  const set = (name: string, value: unknown) => setValues((v) => ({ ...v, [name]: value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,9 +243,14 @@ function EntityForm<T extends { id: string } & Record<string, unknown>>({
     <Modal open onClose={onClose} maxWidth="xl">
       <form onSubmit={submit} className="p-5 md:p-7">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-xl font-display font-bold">
-            {initial ? 'Editar' : 'Novo'} registro
-          </h3>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
+              {initial ? 'Editando' : 'Novo registro'}
+            </p>
+            <h3 className="text-xl font-display font-bold leading-tight">
+              {initial ? 'Atualizar item' : 'Criar item'}
+            </h3>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -215,8 +267,13 @@ function EntityForm<T extends { id: string } & Record<string, unknown>>({
         </div>
 
         <div className="flex gap-2 mt-5 pt-4 border-t border-border-subtle">
-          <Button type="submit" leftIcon={saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} className="flex-1">
-            {saving ? 'Salvando...' : 'Salvar'}
+          <Button
+            type="submit"
+            leftIcon={saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            className="flex-1"
+            disabled={saving}
+          >
+            {saving ? 'Salvando...' : initial ? 'Atualizar' : 'Criar'}
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
@@ -250,7 +307,7 @@ function FieldInput({
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
           rows={4}
-          className="w-full px-3 py-2 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none"
+          className="w-full px-3 py-2 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none resize-none"
         />
       ) : field.type === 'select' ? (
         <select
@@ -304,7 +361,11 @@ function FieldInput({
       {field.imagePreview && field.type === 'image' && typeof v === 'string' && v && (
         <div className="mt-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={v as string} alt="preview" className="h-20 w-20 rounded-lg object-cover bg-bg-elevated" />
+          <img
+            src={v as string}
+            alt="preview"
+            className="h-20 w-20 rounded-lg object-cover bg-bg-elevated border border-border"
+          />
         </div>
       )}
       {field.helper && <p className="text-[11px] text-text-subtle mt-1">{field.helper}</p>}
