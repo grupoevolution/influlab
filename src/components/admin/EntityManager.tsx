@@ -1,0 +1,313 @@
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { Edit3, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Badge } from '@/components/ui/Badge';
+
+export type FieldType = 'text' | 'textarea' | 'number' | 'url' | 'image' | 'select' | 'tags' | 'list' | 'boolean';
+
+export type FieldDef = {
+  name: string;
+  label: string;
+  type: FieldType;
+  options?: { value: string; label: string }[]; // para select
+  placeholder?: string;
+  required?: boolean;
+  helper?: string;
+  imagePreview?: boolean;
+};
+
+export type EntityManagerProps<T extends { id: string }> = {
+  endpoint: string; // ex: /api/admin/products
+  fields: FieldDef[];
+  primaryField: keyof T;          // campo exibido como título do card
+  imageField?: keyof T;           // campo de imagem para thumb
+  secondaryFields?: (keyof T)[];  // campos extras exibidos no card
+  emptyState?: string;
+};
+
+export function EntityManager<T extends { id: string } & Record<string, unknown>>({
+  endpoint,
+  fields,
+  primaryField,
+  imageField,
+  secondaryFields,
+  emptyState,
+}: EntityManagerProps<T>) {
+  const [items, setItems] = useState<T[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<T | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(endpoint, { cache: 'no-store' });
+      const json = await res.json();
+      setItems(json.data ?? []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
+
+  const remove = async (id: string) => {
+    if (!confirm('Remover este item? Esta ação não pode ser desfeita.')) return;
+    const res = await fetch(`${endpoint}/${id}`, { method: 'DELETE' });
+    if (res.ok) load();
+  };
+
+  return (
+    <div className="px-4 md:px-8 py-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-text-muted">{items.length} {items.length === 1 ? 'item' : 'itens'}</p>
+          <Button leftIcon={<Plus size={16} />} onClick={() => setCreating(true)}>
+            Novo
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center gap-2 py-10 justify-center text-text-muted">
+            <Loader2 size={16} className="animate-spin" /> Carregando...
+          </div>
+        ) : items.length === 0 ? (
+          <Card variant="glass" className="p-8 text-center">
+            <p className="text-sm text-text-muted">{emptyState ?? 'Nenhum item cadastrado.'}</p>
+          </Card>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {items.map((item) => (
+              <Card key={item.id} variant="glass" className="p-3.5">
+                <div className="flex items-start gap-3">
+                  {imageField && item[imageField] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={String(item[imageField])}
+                      alt=""
+                      className="h-16 w-16 rounded-lg object-cover shrink-0 bg-bg-elevated"
+                    />
+                  ) : null}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">
+                      {String(item[primaryField] ?? '—')}
+                    </h3>
+                    {secondaryFields && (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {secondaryFields.map((f) => (
+                          <Badge key={String(f)} className="text-[10px] px-1.5 py-0">
+                            {String(item[f] ?? '')}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => setEditing(item)}
+                      className="p-2 rounded-lg text-text-muted hover:text-brand-cyan-300 hover:bg-white/5"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                    <button
+                      onClick={() => remove(item.id)}
+                      className="p-2 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {(editing || creating) && (
+          <EntityForm
+            endpoint={endpoint}
+            fields={fields}
+            initial={editing}
+            onClose={() => {
+              setEditing(null);
+              setCreating(false);
+            }}
+            onSaved={() => {
+              setEditing(null);
+              setCreating(false);
+              load();
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function EntityForm<T extends { id: string } & Record<string, unknown>>({
+  endpoint,
+  fields,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  endpoint: string;
+  fields: FieldDef[];
+  initial: T | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [values, setValues] = useState<Record<string, unknown>>(
+    initial ? { ...(initial as Record<string, unknown>) } : {},
+  );
+  const [saving, setSaving] = useState(false);
+
+  const set = (name: string, value: unknown) => {
+    setValues((v) => ({ ...v, [name]: value }));
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const url = initial ? `${endpoint}/${initial.id}` : endpoint;
+      const method = initial ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      if (res.ok) onSaved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} maxWidth="xl">
+      <form onSubmit={submit} className="p-5 md:p-7">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-xl font-display font-bold">
+            {initial ? 'Editar' : 'Novo'} registro
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+          {fields.map((f) => (
+            <FieldInput key={f.name} field={f} value={values[f.name]} onChange={(v) => set(f.name, v)} />
+          ))}
+        </div>
+
+        <div className="flex gap-2 mt-5 pt-4 border-t border-border-subtle">
+          <Button type="submit" leftIcon={saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} className="flex-1">
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function FieldInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDef;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const v = value as string | number | boolean | string[] | undefined;
+  return (
+    <div>
+      <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+        {field.label}
+        {field.required && <span className="text-red-400 ml-1">*</span>}
+      </label>
+      {field.type === 'textarea' ? (
+        <textarea
+          required={field.required}
+          value={(v as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.placeholder}
+          rows={4}
+          className="w-full px-3 py-2 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none"
+        />
+      ) : field.type === 'select' ? (
+        <select
+          required={field.required}
+          value={(v as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary focus:border-brand-violet-400/50 outline-none"
+        >
+          <option value="">Selecione...</option>
+          {field.options?.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      ) : field.type === 'tags' || field.type === 'list' ? (
+        <input
+          type="text"
+          value={Array.isArray(v) ? (v as string[]).join(', ') : ''}
+          onChange={(e) => onChange(e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+          placeholder={field.placeholder ?? 'Separe por vírgula'}
+          className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none"
+        />
+      ) : field.type === 'boolean' ? (
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={Boolean(v)}
+            onChange={(e) => onChange(e.target.checked)}
+            className="h-4 w-4 accent-brand-violet-500"
+          />
+          <span className="text-sm text-text-secondary">{field.placeholder ?? 'Ativo'}</span>
+        </label>
+      ) : field.type === 'number' ? (
+        <input
+          type="number"
+          required={field.required}
+          value={(v as number) ?? ''}
+          onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder={field.placeholder}
+          className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none"
+        />
+      ) : (
+        <input
+          type={field.type === 'url' || field.type === 'image' ? 'url' : 'text'}
+          required={field.required}
+          value={(v as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.placeholder}
+          className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm text-text-primary placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none"
+        />
+      )}
+      {field.imagePreview && field.type === 'image' && typeof v === 'string' && v && (
+        <div className="mt-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={v as string} alt="preview" className="h-20 w-20 rounded-lg object-cover bg-bg-elevated" />
+        </div>
+      )}
+      {field.helper && <p className="text-[11px] text-text-subtle mt-1">{field.helper}</p>}
+    </div>
+  );
+}

@@ -1,0 +1,53 @@
+{
+  "name": "InfluLab — Laboratório de Criação para TikTok Shop",
+  "short_name": "InfluLab",
+  "description": "Acelere suas vendas no TikTok Shop com produtos campeões, prompts validados e modelos virais.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070912",
+  "theme_color": "#070912",
+  "lang": "pt-BR",
+  "categories": ["business", "productivity", "education"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Produtos Campeões",
+      "short_name": "Campeões",
+      "url": "/app/produtos-campeoes",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Banco de Vídeos",
+      "short_name": "Vídeos",
+      "url": "/app/banco-videos",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Banco de Imagens",
+      "short_name": "Imagens",
+      "url": "/app/banco-imagens",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

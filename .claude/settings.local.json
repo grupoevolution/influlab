@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(AUTH_SECRET=teste123teste123teste123teste123 npm run build)"
+    ]
+  }
+}
