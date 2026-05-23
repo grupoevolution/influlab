@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, Download, Plus, Share, Smartphone, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/brand/Logo';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -23,31 +24,35 @@ function detectPlatform(): Platform {
 
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false;
-  // iOS specific
   const iosStandalone = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-  // Other platforms
   const matchStandalone = window.matchMedia('(display-mode: standalone)').matches;
   return iosStandalone || matchStandalone;
 }
 
 const DISMISSED_KEY = 'influlab.install-dismissed';
 
+// Rotas onde NÃO devemos mostrar prompt de instalação (admin, staff, login)
+const HIDDEN_PREFIXES = ['/admin', '/staff', '/login'];
+
 export function InstallPrompt() {
+  const pathname = usePathname() ?? '';
   const [event, setEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [platform, setPlatform] = useState<Platform>('other');
   const [visible, setVisible] = useState(false);
   const [iosSheetOpen, setIosSheetOpen] = useState(false);
 
+  const isHiddenRoute = HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (isStandalone()) return; // já instalado
+    if (isHiddenRoute) return;
+    if (isStandalone()) return;
 
     const p = detectPlatform();
     setPlatform(p);
 
     const dismissed = window.localStorage.getItem(DISMISSED_KEY);
 
-    // Android / Chrome desktop: aguarda evento beforeinstallprompt
     const handler = (e: Event) => {
       e.preventDefault();
       setEvent(e as BeforeInstallPromptEvent);
@@ -55,7 +60,6 @@ export function InstallPrompt() {
     };
     window.addEventListener('beforeinstallprompt', handler);
 
-    // iOS Safari: não tem evento — mostra prompt customizado após 2s
     if (p === 'ios' && !dismissed) {
       const timer = setTimeout(() => setVisible(true), 2500);
       return () => {
@@ -65,7 +69,17 @@ export function InstallPrompt() {
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+  }, [isHiddenRoute]);
+
+  // Esconder também se o pathname mudar para uma rota oculta enquanto visível
+  useEffect(() => {
+    if (isHiddenRoute) {
+      setVisible(false);
+      setIosSheetOpen(false);
+    }
+  }, [isHiddenRoute]);
+
+  if (isHiddenRoute) return null;
 
   const installAndroid = async () => {
     if (!event) return;
@@ -170,7 +184,6 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
             className="fixed bottom-0 inset-x-0 z-50 max-h-[90vh] overflow-y-auto"
           >
             <div className="glass-strong rounded-t-3xl p-6 pb-10">
-              {/* drag handle */}
               <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-white/15" />
 
               <div className="flex items-start gap-3 mb-5">
@@ -189,16 +202,10 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
 
               <ol className="space-y-3 mb-6">
                 <li className="flex items-start gap-3 p-3 rounded-2xl bg-bg-elevated border border-border">
-                  <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">
-                    1
-                  </div>
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">1</div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-text-primary">
-                      Toque no botão <strong>Compartilhar</strong>
-                    </p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      Fica na barra inferior do Safari (ícone de quadrado com seta pra cima).
-                    </p>
+                    <p className="text-sm font-medium text-text-primary">Toque no botão <strong>Compartilhar</strong></p>
+                    <p className="text-xs text-text-muted mt-0.5">Fica na barra inferior do Safari (ícone de quadrado com seta pra cima).</p>
                   </div>
                   <div className="shrink-0 h-10 w-10 rounded-xl bg-bg border border-border flex items-center justify-center">
                     <Share size={18} className="text-brand-cyan-300" />
@@ -206,16 +213,10 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
                 </li>
 
                 <li className="flex items-start gap-3 p-3 rounded-2xl bg-bg-elevated border border-border">
-                  <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">
-                    2
-                  </div>
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">2</div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-text-primary">
-                      Role e toque em <strong>Adicionar à Tela de Início</strong>
-                    </p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      Pode aparecer no meio ou final da lista de opções.
-                    </p>
+                    <p className="text-sm font-medium text-text-primary">Role e toque em <strong>Adicionar à Tela de Início</strong></p>
+                    <p className="text-xs text-text-muted mt-0.5">Pode aparecer no meio ou final da lista de opções.</p>
                   </div>
                   <div className="shrink-0 h-10 w-10 rounded-xl bg-bg border border-border flex items-center justify-center">
                     <Plus size={18} className="text-brand-cyan-300" />
@@ -223,16 +224,10 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
                 </li>
 
                 <li className="flex items-start gap-3 p-3 rounded-2xl bg-bg-elevated border border-border">
-                  <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">
-                    3
-                  </div>
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">3</div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-text-primary">
-                      Toque em <strong>Adicionar</strong> no canto superior direito
-                    </p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      Pronto! O ícone do InfluLab aparece na sua tela de início.
-                    </p>
+                    <p className="text-sm font-medium text-text-primary">Toque em <strong>Adicionar</strong> no canto superior direito</p>
+                    <p className="text-xs text-text-muted mt-0.5">Pronto! O ícone do InfluLab aparece na sua tela de início.</p>
                   </div>
                   <div className="shrink-0 h-10 w-10 rounded-xl bg-gradient-brand flex items-center justify-center">
                     <ChevronRight size={18} className="text-white" />

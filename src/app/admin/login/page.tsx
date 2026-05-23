@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 py-10 overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-10 overflow-hidden bg-bg">
       <AnimatedBackground variant="intense" />
 
       <div className="relative w-full max-w-md">
@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="space-y-3" autoComplete="off">
             <div>
               <label className="text-xs font-semibold text-text-secondary mb-1.5 block">Email</label>
               <div className="relative">
@@ -78,8 +78,10 @@ export default function AdminLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
                   className="w-full h-12 pl-10 pr-3 rounded-xl bg-bg-elevated border border-border text-text-primary placeholder:text-text-muted focus:border-brand-violet-400 outline-none"
-                  placeholder="admin@influlab.io"
+                  placeholder="Digite seu email"
                 />
               </div>
             </div>
@@ -93,8 +95,9 @@ export default function AdminLoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
                   className="w-full h-12 pl-10 pr-3 rounded-xl bg-bg-elevated border border-border text-text-primary placeholder:text-text-muted focus:border-brand-violet-400 outline-none"
-                  placeholder="••••••••"
+                  placeholder="Digite sua senha"
                 />
               </div>
             </div>

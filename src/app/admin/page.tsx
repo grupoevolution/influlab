@@ -1,6 +1,7 @@
 import {
   Activity,
   ArrowUpRight,
+  AlertTriangle,
   Clapperboard,
   Crown,
   Eye,
@@ -19,79 +20,41 @@ import { Badge } from '@/components/ui/Badge';
 import { StatCard } from '@/components/admin/StatCard';
 import { AccessChart } from '@/components/admin/AccessChart';
 import { getCurrentSession } from '@/lib/auth/session';
-import { getDB } from '@/lib/db';
+import { getDB, isPersistenceAvailable } from '@/lib/db';
+import type { Schema } from '@/lib/db/types';
 
 export const dynamic = 'force-dynamic';
 
+const EMPTY: Schema = {
+  products: [], videoPrompts: [], imagePrompts: [], virals: [],
+  creators: [], whitelist: [], announcements: [], accessLog: [], broadcasts: [],
+};
+
 export default async function AdminDashboardPage() {
   const session = await getCurrentSession();
-  const db = await getDB();
-
   const isAdmin = session?.role === 'admin';
 
-  // KPIs principais (gerais)
-  const totalContent =
-    db.products.length + db.videoPrompts.length + db.imagePrompts.length + db.virals.length;
+  let db: Schema = EMPTY;
+  let dbError: string | null = null;
+  try {
+    db = await getDB();
+  } catch (err) {
+    dbError = (err as Error)?.message ?? 'Erro ao carregar dados.';
+  }
 
   const todayISO = new Date().toISOString().slice(0, 10);
   const accessesToday = db.accessLog.filter((l) => l.at.startsWith(todayISO)).length;
-  const loginsToday = db.accessLog.filter(
-    (l) => l.at.startsWith(todayISO) && l.type === 'login',
-  ).length;
-  const blockedToday = db.accessLog.filter(
-    (l) => l.at.startsWith(todayISO) && l.type === 'blocked',
-  ).length;
+  const loginsToday = db.accessLog.filter((l) => l.at.startsWith(todayISO) && l.type === 'login').length;
+  const blockedToday = db.accessLog.filter((l) => l.at.startsWith(todayISO) && l.type === 'blocked').length;
 
   const stats = [
-    {
-      icon: Crown,
-      label: 'Produtos campeões',
-      value: db.products.length,
-      hint: 'Ativos no app',
-      href: '/admin/produtos',
-      accent: 'amber' as const,
-    },
-    {
-      icon: Clapperboard,
-      label: 'Prompts de vídeo',
-      value: db.videoPrompts.length,
-      hint: 'Banco completo',
-      href: '/admin/prompts-video',
-      accent: 'violet' as const,
-    },
-    {
-      icon: ImageIcon,
-      label: 'Prompts de imagem',
-      value: db.imagePrompts.length,
-      hint: 'Disponíveis',
-      href: '/admin/prompts-imagem',
-      accent: 'cyan' as const,
-    },
-    {
-      icon: Flame,
-      label: 'Vídeos virais',
-      value: db.virals.length,
-      hint: 'Modelos catalogados',
-      href: '/admin/virais',
-      accent: 'pink' as const,
-    },
-    {
-      icon: Trophy,
-      label: 'Top criadores',
-      value: db.creators.length,
-      hint: 'No ranking',
-      href: '/admin/criadores',
-      accent: 'emerald' as const,
-    },
+    { icon: Crown, label: 'Produtos campeões', value: db.products.length, hint: 'Ativos no app', href: '/admin/produtos', accent: 'amber' as const },
+    { icon: Clapperboard, label: 'Prompts de vídeo', value: db.videoPrompts.length, hint: 'Banco completo', href: '/admin/prompts-video', accent: 'violet' as const },
+    { icon: ImageIcon, label: 'Prompts de imagem', value: db.imagePrompts.length, hint: 'Disponíveis', href: '/admin/prompts-imagem', accent: 'cyan' as const },
+    { icon: Flame, label: 'Vídeos virais', value: db.virals.length, hint: 'Modelos catalogados', href: '/admin/virais', accent: 'pink' as const },
+    { icon: Trophy, label: 'Top criadores', value: db.creators.length, hint: 'No ranking', href: '/admin/criadores', accent: 'emerald' as const },
     ...(isAdmin
-      ? [{
-          icon: UserCheck,
-          label: 'Acessos liberados',
-          value: db.whitelist.length,
-          hint: 'Compradores ativos',
-          href: '/admin/acessos',
-          accent: 'cyan' as const,
-        }]
+      ? [{ icon: UserCheck, label: 'Acessos liberados', value: db.whitelist.length, hint: 'Compradores ativos', href: '/admin/acessos', accent: 'cyan' as const }]
       : []),
   ];
 
@@ -100,13 +63,16 @@ export default async function AdminDashboardPage() {
     { href: '/admin/prompts-video', label: 'Novo prompt de vídeo', icon: Clapperboard, accent: 'violet' },
     { href: '/admin/prompts-imagem', label: 'Novo prompt de imagem', icon: ImageIcon, accent: 'cyan' },
     { href: '/admin/virais', label: 'Novo vídeo viral', icon: Flame, accent: 'pink' },
-    ...(isAdmin ? [
-      { href: '/admin/acessos', label: 'Liberar acesso (email)', icon: UserCheck, accent: 'cyan' },
-      { href: '/admin/avisos', label: 'Criar aviso do dia', icon: ShieldCheck, accent: 'violet' },
-    ] : []),
+    ...(isAdmin
+      ? [
+          { href: '/admin/acessos', label: 'Liberar acesso (email)', icon: UserCheck, accent: 'cyan' },
+          { href: '/admin/avisos', label: 'Criar aviso do dia', icon: ShieldCheck, accent: 'violet' },
+        ]
+      : []),
   ];
 
   const recentLogins = db.accessLog.slice(0, 8);
+  const persistOk = isPersistenceAvailable();
 
   return (
     <>
@@ -124,32 +90,45 @@ export default async function AdminDashboardPage() {
       />
 
       <section className="px-4 md:px-8 py-6 max-w-7xl mx-auto space-y-6">
-        {/* KPIs grid */}
+        {(dbError || !persistOk) && isAdmin && (
+          <Card variant="glass" className="p-4 border-amber-400/40 bg-amber-500/10">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={18} className="text-amber-300 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-200">Persistência em memória</p>
+                <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
+                  {dbError
+                    ? `Houve um erro ao carregar o banco: ${dbError}`
+                    : 'O volume /app/data não está montado no EasyPanel. Os dados serão perdidos a cada deploy.'}
+                  <br />
+                  <strong>Solução:</strong> no EasyPanel → Mounts → adicione um volume em <code className="text-brand-cyan-300">/app/data</code> e refaça o deploy.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
           {stats.map((s, i) => (
             <StatCard key={s.label} {...s} delay={i * 0.05} />
           ))}
         </div>
 
-        {/* Bottom row */}
         <div className="grid gap-4 lg:grid-cols-3">
-          {/* Access chart (admin only) */}
           {isAdmin && (
             <Card variant="glass" className="lg:col-span-2 p-5">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1 inline-flex items-center gap-1.5">
                     <Activity size={11} />
                     Acessos no app
                   </p>
-                  <h3 className="font-display font-bold text-lg leading-tight">
-                    Últimos 14 dias
-                  </h3>
+                  <h3 className="font-display font-bold text-lg leading-tight">Últimos 14 dias</h3>
                 </div>
                 <div className="flex gap-3 text-xs">
                   <div className="text-right">
                     <p className="text-[10px] text-text-muted">Hoje</p>
-                    <p className="font-display font-bold text-text-primary">{accessesToday}</p>
+                    <p className="font-display font-bold">{accessesToday}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] text-text-muted">Logins</p>
@@ -165,7 +144,6 @@ export default async function AdminDashboardPage() {
             </Card>
           )}
 
-          {/* Quick actions */}
           <Card variant="glass" className={isAdmin ? 'p-5' : 'lg:col-span-2 p-5'}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -204,7 +182,6 @@ export default async function AdminDashboardPage() {
           </Card>
         </div>
 
-        {/* Activity feed */}
         {isAdmin && (
           <div>
             <div className="flex items-center justify-between mb-3">
