@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { Schema, SchemaKey } from './types';
+import type { Schema, SchemaKey, SchemaArrayKey } from './types';
 import { seedIfEmpty } from './seed';
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
@@ -20,6 +20,8 @@ const EMPTY_SCHEMA: Schema = {
   announcements: [],
   accessLog: [],
   broadcasts: [],
+  platformMappings: [],
+  platformConfig: { kiwify: { enabled: true }, ticto: { enabled: true } },
 };
 
 async function ensureFile() {
@@ -90,55 +92,58 @@ export async function mutateDB<T>(fn: (db: Schema) => T | Promise<T>): Promise<T
   return p;
 }
 
-export async function listAll<K extends SchemaKey>(key: K): Promise<Schema[K]> {
+export async function listAll<K extends SchemaArrayKey>(key: K): Promise<Schema[K]> {
   const db = await getDB();
   return db[key];
 }
 
-export async function findById<K extends SchemaKey>(
+type ArrItem<K extends SchemaArrayKey> = Schema[K] extends ReadonlyArray<infer U> ? U : never;
+
+export async function findById<K extends SchemaArrayKey>(
   key: K,
   id: string,
-): Promise<Schema[K][number] | null> {
+): Promise<ArrItem<K> | null> {
   const db = await getDB();
-  // @ts-expect-error generic narrowing
-  return db[key].find((item: { id: string }) => item.id === id) ?? null;
+  const arr = db[key] as unknown as { id: string }[];
+  return (arr.find((item) => item.id === id) ?? null) as ArrItem<K> | null;
 }
 
 export function newId(prefix = ''): string {
   return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export async function insertOne<K extends SchemaKey>(
+export async function insertOne<K extends SchemaArrayKey>(
   key: K,
-  item: Schema[K][number],
-): Promise<Schema[K][number]> {
+  item: ArrItem<K>,
+): Promise<ArrItem<K>> {
   await mutateDB((db) => {
-    // @ts-expect-error generic narrowing
-    db[key].unshift(item);
+    const arr = db[key] as unknown as ArrItem<K>[];
+    arr.unshift(item);
   });
   return item;
 }
 
-export async function updateOne<K extends SchemaKey>(
+export async function updateOne<K extends SchemaArrayKey>(
   key: K,
   id: string,
-  patch: Partial<Schema[K][number]>,
-): Promise<Schema[K][number] | null> {
+  patch: Partial<ArrItem<K>>,
+): Promise<ArrItem<K> | null> {
   return mutateDB((db) => {
-    // @ts-expect-error generic narrowing
-    const idx = db[key].findIndex((item: { id: string }) => item.id === id);
+    const arr = db[key] as unknown as ({ id: string } & Record<string, unknown>)[];
+    const idx = arr.findIndex((item) => item.id === id);
     if (idx === -1) return null;
-    db[key][idx] = { ...db[key][idx], ...patch };
-    return db[key][idx];
+    arr[idx] = { ...arr[idx], ...patch } as typeof arr[number];
+    return arr[idx] as ArrItem<K>;
   });
 }
 
-export async function deleteOne<K extends SchemaKey>(key: K, id: string): Promise<boolean> {
+export async function deleteOne<K extends SchemaArrayKey>(key: K, id: string): Promise<boolean> {
   return mutateDB((db) => {
-    const before = db[key].length;
-    // @ts-expect-error generic narrowing
-    db[key] = db[key].filter((item: { id: string }) => item.id !== id);
-    return db[key].length < before;
+    const arr = db[key] as unknown as { id: string }[];
+    const before = arr.length;
+    const next = arr.filter((item) => item.id !== id);
+    (db[key] as unknown) = next;
+    return next.length < before;
   });
 }
 
@@ -150,18 +155,24 @@ export async function logAccess(entry: import('./types').AccessLogEntry) {
 }
 
 export async function isEmailWhitelisted(email: string): Promise<boolean> {
+  return (await getEmailAccess(email)).allowed;
+}
+
+/** Verifica se o email tem acesso e qual é o plano (basic / pro) */
+export async function getEmailAccess(email: string): Promise<{ allowed: boolean; plan: 'basic' | 'pro' | null }> {
   const e = email.trim().toLowerCase();
 
-  // Emails sempre liberados via variável de ambiente (separados por vírgula).
-  const envAllowed = (process.env.DEFAULT_ALLOWED_EMAILS ?? '')
+  // Envs PRO sempre acessam tudo
+  const envAllowedPro = (process.env.DEFAULT_ALLOWED_EMAILS ?? '')
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  if (envAllowed.includes(e)) return true;
+  if (envAllowedPro.includes(e)) return { allowed: true, plan: 'pro' };
 
-  // Liberados pelo painel administrativo
   const db = await getDB();
-  return db.whitelist.some((w) => w.email.trim().toLowerCase() === e);
+  const entry = db.whitelist.find((w) => w.email.trim().toLowerCase() === e);
+  if (!entry) return { allowed: false, plan: null };
+  return { allowed: true, plan: entry.plan };
 }
 
 export async function getActiveAnnouncement() {

@@ -1,10 +1,14 @@
-// Tipos persistidos no DB JSON. Quando migrarmos pra Postgres+Prisma, mesma forma.
+// Tipos persistidos no DB JSON.
+
+export type Plan = 'basic' | 'pro';
 
 export type AdProduct = {
   id: string;
   name: string;
   niche: string;
-  image: string;
+  plan: Plan;                 // NOVO: básico ou pro
+  image: string;              // imagem principal do produto (modal)
+  coverImage?: string;        // NOVO: imagem de capa (card)
   rankingTrend: 'up' | 'down' | 'stable';
   rankingPosition: number;
   salesEstimate: number;
@@ -17,6 +21,7 @@ export type AdProduct = {
   flowUrl: string;
   tags: string[];
   description: string;
+  videoTranscription?: string; // NOVO: transcrição do vídeo campeão
   period: 'today' | '7d' | '14d';
   createdAt: string;
 };
@@ -26,12 +31,13 @@ export type VideoPromptDB = {
   title: string;
   videoUrl: string;
   thumb: string;
-  prompt: string;
+  prompt?: string;          // legado / fallback
+  promptFlow?: string;      // NOVO: prompt pro Google Flow
+  promptCreate?: string;    // NOVO: prompt pro Veo 3 Create
   category: string;
   niche: string;
   views: number;
   duration: string;
-  platforms: ('flow' | 'nano-banana')[];
   createdAt: string;
 };
 
@@ -75,7 +81,10 @@ export type CreatorDB = {
 
 export type WhitelistEntry = {
   email: string;
-  source: 'manual' | 'webhook' | 'import';
+  plan: Plan;                 // NOVO: plano do comprador
+  source: 'manual' | 'webhook' | 'import' | 'env';
+  platform?: 'kiwify' | 'ticto' | string;
+  productRef?: string;        // id ou nome do produto na plataforma
   note?: string;
   addedAt: string;
 };
@@ -93,11 +102,12 @@ export type AnnouncementDB = {
 
 export type AccessLogEntry = {
   id: string;
-  type: 'login' | 'visit' | 'blocked';
+  type: 'login' | 'visit' | 'blocked' | 'webhook' | 'import' | 'upload';
   email: string;
-  role: 'admin' | 'staff' | 'student' | 'guest';
+  role: 'admin' | 'staff' | 'student' | 'guest' | 'system';
   ip?: string;
   userAgent?: string;
+  meta?: Record<string, unknown>;
   at: string;
 };
 
@@ -107,6 +117,28 @@ export type NotificationBroadcast = {
   body: string;
   url?: string;
   sentAt: string;
+};
+
+/** Mapeamento de produto da plataforma de pagamento -> plano interno */
+export type PlatformProductMapping = {
+  id: string;
+  platform: 'kiwify' | 'ticto';
+  productId: string;          // ID do produto OU nome (configurável)
+  productName?: string;
+  plan: Plan;
+  createdAt: string;
+};
+
+/** Configuração das integrações com plataformas */
+export type PlatformConfig = {
+  kiwify?: {
+    webhookSecret?: string;   // assinatura HMAC pra validar (opcional)
+    enabled: boolean;
+  };
+  ticto?: {
+    webhookSecret?: string;
+    enabled: boolean;
+  };
 };
 
 export type Schema = {
@@ -119,6 +151,13 @@ export type Schema = {
   announcements: AnnouncementDB[];
   accessLog: AccessLogEntry[];
   broadcasts: NotificationBroadcast[];
+  platformMappings: PlatformProductMapping[];
+  platformConfig: PlatformConfig;
 };
 
 export type SchemaKey = keyof Schema;
+
+/** Chaves do schema cujo valor é Array — usadas pelos CRUDs genéricos. */
+export type SchemaArrayKey = {
+  [K in SchemaKey]: Schema[K] extends ReadonlyArray<unknown> ? K : never;
+}[SchemaKey];

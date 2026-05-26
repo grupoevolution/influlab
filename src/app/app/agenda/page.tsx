@@ -29,7 +29,7 @@ import {
   useCalendar,
   type CalendarItem,
 } from '@/lib/calendar-store';
-import { projectMonthlyRevenue, useGoal } from '@/lib/goal-store';
+import { calcularProjecao, useGoal } from '@/lib/goal-store';
 import { useProducts } from '@/lib/api/client';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -53,8 +53,8 @@ export default function AgendaPage() {
   const weekStart = weekDates[0];
   const weekEnd = weekDates[6];
 
-  // Meta da semana = vídeos/dia × 7
-  const weeklyGoal = goal.videosPerDay * 7;
+  // Meta da semana = posts/dia/conta * contas * 7
+  const weeklyGoal = goal.contas * goal.postsPorDia * 7;
 
   // Postados nessa semana
   const postedThisWeek = items.filter(
@@ -66,13 +66,18 @@ export default function AgendaPage() {
     (i) => !i.posted && i.scheduledDate >= weekStart && i.scheduledDate <= weekEnd,
   ).length;
 
-  const weekProgressPct = Math.min(100, (postedThisWeek / weeklyGoal) * 100);
+  const weekProgressPct = Math.min(100, weeklyGoal === 0 ? 0 : (postedThisWeek / weeklyGoal) * 100);
 
-  // Faturamento do mês corrente
+  // Faturamento do mês corrente — usa cenário moderado da calculadora
   const monthPrefix = today.slice(0, 7);
   const postedThisMonth = items.filter((i) => i.posted && i.scheduledDate.startsWith(monthPrefix)).length;
-  const monthRevenue = postedThisMonth * 33; // mesmo modelo da calculadora
-  const monthGoalProgress = Math.min(100, (monthRevenue / goal.monthlyGoal) * 100);
+  const projection = calcularProjecao(goal);
+  const monthGoal = projection.cenarios[1].comissao; // moderado
+  // Estimativa de faturamento baseada na proporção de posts realizados vs. esperados
+  const expectedPostsMonth = projection.postsMes;
+  const ratio = expectedPostsMonth > 0 ? Math.min(1, postedThisMonth / expectedPostsMonth) : 0;
+  const monthRevenue = monthGoal * ratio;
+  const monthGoalProgress = Math.min(100, ratio * 100);
 
   const openAdd = (date: string) => {
     setAddDate(date);
@@ -107,7 +112,7 @@ export default function AgendaPage() {
                     <Target size={11} /> Meta mensal
                   </p>
                   <p className="text-lg md:text-2xl font-display font-bold leading-tight">
-                    {formatCurrency(monthRevenue)} <span className="text-text-muted text-sm font-normal">de {formatCurrency(goal.monthlyGoal)}</span>
+                    {formatCurrency(monthRevenue)} <span className="text-text-muted text-sm font-normal">de {formatCurrency(monthGoal)}</span>
                   </p>
                 </div>
                 <Link href="/app/calculadora">

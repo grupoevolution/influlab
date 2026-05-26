@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/session';
 import { deleteOne, insertOne, listAll, newId, updateOne } from '@/lib/db';
-import type { Schema, SchemaKey } from '@/lib/db/types';
+import type { Schema, SchemaArrayKey } from '@/lib/db/types';
 
 export type CrudOptions = {
   requireRole?: 'admin' | 'staff' | 'any';
@@ -17,7 +17,9 @@ async function checkAccess(opts: CrudOptions = {}) {
   return { ok: true as const, session };
 }
 
-export function makeListHandler<K extends SchemaKey>(key: K, opts: CrudOptions = {}) {
+type ArrayItem<K extends SchemaArrayKey> = Schema[K] extends ReadonlyArray<infer U> ? U : never;
+
+export function makeListHandler<K extends SchemaArrayKey>(key: K, opts: CrudOptions = {}) {
   return async function GET() {
     const ac = await checkAccess(opts);
     if (!ac.ok) return NextResponse.json({ error: ac.error }, { status: ac.status });
@@ -26,7 +28,7 @@ export function makeListHandler<K extends SchemaKey>(key: K, opts: CrudOptions =
   };
 }
 
-export function makeCreateHandler<K extends SchemaKey>(
+export function makeCreateHandler<K extends SchemaArrayKey>(
   key: K,
   idPrefix: string,
   opts: CrudOptions = {},
@@ -34,30 +36,30 @@ export function makeCreateHandler<K extends SchemaKey>(
   return async function POST(req: Request) {
     const ac = await checkAccess(opts);
     if (!ac.ok) return NextResponse.json({ error: ac.error }, { status: ac.status });
-    const body = (await req.json()) as Partial<Schema[K][number]>;
+    const body = (await req.json()) as Partial<ArrayItem<K>>;
     const item = {
       ...body,
       id: newId(idPrefix),
       createdAt: new Date().toISOString(),
-    } as Schema[K][number];
+    } as ArrayItem<K>;
     await insertOne(key, item);
     return NextResponse.json({ data: item }, { status: 201 });
   };
 }
 
-export function makeUpdateHandler<K extends SchemaKey>(key: K, opts: CrudOptions = {}) {
+export function makeUpdateHandler<K extends SchemaArrayKey>(key: K, opts: CrudOptions = {}) {
   return async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
     const ac = await checkAccess(opts);
     if (!ac.ok) return NextResponse.json({ error: ac.error }, { status: ac.status });
     const { id } = await ctx.params;
-    const patch = (await req.json()) as Partial<Schema[K][number]>;
+    const patch = (await req.json()) as Partial<ArrayItem<K>>;
     const updated = await updateOne(key, id, patch);
     if (!updated) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 });
     return NextResponse.json({ data: updated });
   };
 }
 
-export function makeDeleteHandler<K extends SchemaKey>(key: K, opts: CrudOptions = {}) {
+export function makeDeleteHandler<K extends SchemaArrayKey>(key: K, opts: CrudOptions = {}) {
   return async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
     const ac = await checkAccess(opts);
     if (!ac.ok) return NextResponse.json({ error: ac.error }, { status: ac.status });

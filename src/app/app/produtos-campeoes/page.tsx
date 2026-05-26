@@ -1,56 +1,74 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowDown, ArrowUp, Crown, Flame, Minus, Search, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowUp, Crown, Flame, Minus, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ProductModal } from '@/components/products/ProductModal';
+import { LockedProductCard } from '@/components/products/LockedProductCard';
+import { UpgradeProModal } from '@/components/products/UpgradeProModal';
 import { useProducts } from '@/lib/api/client';
+import { useStudentSession } from '@/lib/student-session';
 import type { AdProduct } from '@/lib/db/types';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
 
-type Sort = 'recent' | 'top';
+type Sort = 'top' | 'recent';
 type Period = 'all' | 'today' | '7d' | '14d';
-type Niche = 'Todos' | 'Eletrônicos' | 'Beleza' | 'Saúde & Bem-estar' | 'Decoração' | 'Skincare';
+
+const sorts: { value: Sort; label: string; icon: typeof Flame }[] = [
+  { value: 'top', label: 'Mais vendido', icon: Flame },
+  { value: 'recent', label: 'Recente', icon: Sparkles },
+];
 
 const periods: { value: Period; label: string }[] = [
+  { value: 'all', label: 'Todos períodos' },
   { value: 'today', label: 'Hoje' },
   { value: '7d', label: '7 dias' },
   { value: '14d', label: '14 dias' },
-  { value: 'all', label: 'Todos' },
 ];
 
-const niches: Niche[] = ['Todos', 'Eletrônicos', 'Beleza', 'Saúde & Bem-estar', 'Decoração', 'Skincare'];
-
 export default function ProdutosCampeoesPage() {
-  const [sort, setSort] = useState<Sort>('recent');
-  const [period, setPeriod] = useState<Period>('today');
-  const [niche, setNiche] = useState<Niche>('Todos');
-  const [query, setQuery] = useState('');
-
+  const [sort, setSort] = useState<Sort>('top');
+  const [period, setPeriod] = useState<Period>('all');
+  const [niche, setNiche] = useState<string>('Todos');
   const [selected, setSelected] = useState<AdProduct | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { data: products } = useProducts();
+  const session = useStudentSession();
+  const isPro = session?.plan === 'pro' || !session?.email; // sem login no admin = preview livre
+
+  const niches = useMemo(() => {
+    const set = new Set(products.map((p) => p.niche));
+    return ['Todos', ...Array.from(set)];
+  }, [products]);
 
   const filtered = useMemo(() => {
     const list = products.filter((p) => {
       if (period === 'today' && p.period !== 'today') return false;
       if (period === '7d' && !['today', '7d'].includes(p.period)) return false;
       if (niche !== 'Todos' && p.niche !== niche) return false;
-      if (query && !p.name.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
+    if (sort === 'top') return [...list].sort((a, b) => b.salesEstimate - a.salesEstimate);
+    return [...list].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [sort, period, niche, products]);
 
-    if (sort === 'top') {
-      return [...list].sort((a, b) => b.salesEstimate - a.salesEstimate);
+  const handleProductClick = (p: AdProduct) => {
+    if (p.plan === 'pro' && !isPro) {
+      setUpgradeOpen(true);
+      return;
     }
-    return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [sort, period, niche, query, products]);
+    setSelected(p);
+  };
 
   return (
     <>
       <PageHeader
+        eyebrow="Atualizado diariamente"
         title={
           <>
             Produtos <span className="text-gradient-brand">campeões</span>
@@ -59,10 +77,31 @@ export default function ProdutosCampeoesPage() {
       />
 
       {/* Filtros */}
-      <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg/85 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 space-y-2.5">
-          {/* Linha 1 — Período (filtro principal) */}
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+      <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide items-center">
+            {sorts.map((s) => {
+              const Icon = s.icon;
+              const active = sort === s.value;
+              return (
+                <button
+                  key={s.value}
+                  onClick={() => setSort(s.value)}
+                  className={cn(
+                    'shrink-0 inline-flex items-center gap-1.5 px-3 h-9 text-xs md:text-sm font-medium rounded-full transition border',
+                    active
+                      ? 'bg-gradient-brand text-white border-transparent shadow-glow-brand'
+                      : 'bg-bg-elevated border-border text-text-muted hover:text-text-primary hover:border-brand-violet-400/30',
+                  )}
+                >
+                  <Icon size={13} />
+                  {s.label}
+                </button>
+              );
+            })}
+
+            <div className="shrink-0 h-5 w-px bg-border mx-1" />
+
             {periods.map((p) => {
               const active = period === p.value;
               return (
@@ -70,102 +109,70 @@ export default function ProdutosCampeoesPage() {
                   key={p.value}
                   onClick={() => setPeriod(p.value)}
                   className={cn(
-                    'shrink-0 px-4 h-9 text-xs md:text-sm font-semibold rounded-full transition',
+                    'shrink-0 px-3 h-9 text-xs md:text-sm font-medium rounded-full transition border',
                     active
-                      ? 'bg-gradient-brand text-white shadow-glow-brand'
-                      : 'bg-bg-elevated text-text-muted border border-border hover:text-text-primary hover:border-brand-violet-400/40',
+                      ? 'bg-gradient-brand-soft border-brand-violet-400/40 text-text-primary'
+                      : 'bg-bg-elevated border-border text-text-muted hover:text-text-primary hover:border-brand-violet-400/30',
                   )}
                 >
                   {p.label}
                 </button>
               );
             })}
-          </div>
 
-          {/* Linha 2 — Sort + Niche + Search */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Sort segmented */}
-            <div className="inline-flex p-0.5 rounded-xl bg-bg-elevated border border-border">
-              <button
-                onClick={() => setSort('recent')}
-                className={cn(
-                  'relative inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-lg transition',
-                  sort === 'recent' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary',
-                )}
-              >
-                {sort === 'recent' && (
-                  <motion.div
-                    layoutId="sort-pill"
-                    className="absolute inset-0 rounded-lg bg-gradient-brand-soft border border-brand-violet-400/40"
-                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  />
-                )}
-                <Sparkles size={12} className="relative" />
-                <span className="relative">Recente</span>
-              </button>
-              <button
-                onClick={() => setSort('top')}
-                className={cn(
-                  'relative inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-lg transition',
-                  sort === 'top' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary',
-                )}
-              >
-                {sort === 'top' && (
-                  <motion.div
-                    layoutId="sort-pill"
-                    className="absolute inset-0 rounded-lg bg-gradient-brand-soft border border-brand-violet-400/40"
-                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  />
-                )}
-                <Flame size={12} className="relative" />
-                <span className="relative">Mais vendido</span>
-              </button>
-            </div>
+            {niches.length > 1 && <div className="shrink-0 h-5 w-px bg-border mx-1" />}
 
-            {/* Niche dropdown */}
-            <div className="relative">
-              <select
-                value={niche}
-                onChange={(e) => setNiche(e.target.value as Niche)}
-                className="appearance-none h-9 pl-3 pr-8 rounded-xl bg-bg-elevated border border-border text-xs md:text-sm font-medium text-text-primary hover:border-brand-cyan-400/40 focus:border-brand-cyan-400/60 outline-none cursor-pointer transition"
-              >
-                {niches.map((n) => (
-                  <option key={n} value={n} className="bg-bg-elevated text-text-primary">
-                    {n === 'Todos' ? 'Todos os nichos' : n}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted text-xs">▾</span>
-            </div>
-
-            {/* Search */}
-            <div className="relative flex-1 min-w-[160px]">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                type="text"
-                placeholder="Buscar produto..."
-                className="w-full h-9 pl-9 pr-3 rounded-xl bg-bg-elevated border border-border text-xs md:text-sm placeholder:text-text-muted focus:border-brand-violet-400/50 outline-none"
-              />
-            </div>
+            {niches.map((n) => {
+              const active = niche === n;
+              return (
+                <button
+                  key={n}
+                  onClick={() => setNiche(n)}
+                  className={cn(
+                    'shrink-0 px-3 h-9 text-xs md:text-sm font-medium rounded-full transition border',
+                    active
+                      ? 'bg-brand-cyan-500/15 border-brand-cyan-400/40 text-brand-cyan-200'
+                      : 'bg-bg-elevated border-border text-text-muted hover:text-text-primary hover:border-brand-cyan-400/30',
+                  )}
+                >
+                  {n}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Grid */}
       <section className="px-3 md:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid gap-3 md:gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {filtered.map((product, i) => {
+              const isLocked = product.plan === 'pro' && !isPro;
+
+              if (isLocked) {
+                return (
+                  <LockedProductCard
+                    key={product.id}
+                    onClick={() => setUpgradeOpen(true)}
+                    delay={i * 0.04}
+                  />
+                );
+              }
+
               const TrendIcon =
-                product.rankingTrend === 'up' ? ArrowUp : product.rankingTrend === 'down' ? ArrowDown : Minus;
+                product.rankingTrend === 'up'
+                  ? ArrowUp
+                  : product.rankingTrend === 'down'
+                  ? ArrowDown
+                  : Minus;
               const trendColor =
                 product.rankingTrend === 'up'
                   ? 'text-emerald-400'
                   : product.rankingTrend === 'down'
                   ? 'text-red-400'
                   : 'text-text-muted';
+
+              const img = product.coverImage || product.image;
 
               return (
                 <motion.div
@@ -174,12 +181,12 @@ export default function ProdutosCampeoesPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: i * 0.04 }}
                 >
-                  <button onClick={() => setSelected(product)} className="block w-full text-left group">
+                  <button onClick={() => handleProductClick(product)} className="block w-full text-left group">
                     <Card variant="glass" hoverable className="overflow-hidden">
                       <div className="relative aspect-[4/5] overflow-hidden bg-bg-elevated">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={product.image}
+                          src={img}
                           alt={product.name}
                           className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
@@ -190,13 +197,23 @@ export default function ProdutosCampeoesPage() {
                           <span className="font-bold">#{product.rankingPosition}</span>
                         </div>
 
-                        <div className={cn('absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full glass-strong', trendColor)}>
-                          <TrendIcon size={10} />
-                        </div>
+                        {product.plan === 'pro' && (
+                          <div className="absolute top-2 right-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gradient-brand text-white text-[9px] font-bold uppercase tracking-widest">
+                            <Crown size={9} /> Pro
+                          </div>
+                        )}
+
+                        {product.plan !== 'pro' && (
+                          <div className={cn('absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full glass-strong', trendColor)}>
+                            <TrendIcon size={10} />
+                          </div>
+                        )}
 
                         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
                           <Badge variant="brand" className="text-[10px] px-1.5 py-0">{product.niche}</Badge>
-                          <span className="text-xs font-display font-bold text-brand-cyan-300 drop-shadow">{product.commission}%</span>
+                          <span className="text-xs font-display font-bold text-brand-cyan-300 drop-shadow">
+                            {product.commission}%
+                          </span>
                         </div>
                       </div>
 
@@ -227,6 +244,7 @@ export default function ProdutosCampeoesPage() {
       </section>
 
       <ProductModal product={selected} open={!!selected} onClose={() => setSelected(null)} />
+      <UpgradeProModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </>
   );
 }

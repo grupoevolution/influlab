@@ -28,6 +28,7 @@ export const dynamic = 'force-dynamic';
 const EMPTY: Schema = {
   products: [], videoPrompts: [], imagePrompts: [], virals: [],
   creators: [], whitelist: [], announcements: [], accessLog: [], broadcasts: [],
+  platformMappings: [], platformConfig: {},
 };
 
 export default async function AdminDashboardPage() {

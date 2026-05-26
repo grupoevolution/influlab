@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/session';
 import { getDB, mutateDB } from '@/lib/db';
-import type { WhitelistEntry } from '@/lib/db/types';
+import type { Plan, WhitelistEntry } from '@/lib/db/types';
 
 export const runtime = 'nodejs';
 
@@ -22,11 +22,12 @@ export async function GET() {
 export async function POST(req: Request) {
   const ac = await requireAdmin();
   if (!ac.ok) return NextResponse.json({ error: 'no auth' }, { status: ac.status });
-  const { email, note } = (await req.json()) as { email?: string; note?: string };
+  const { email, plan = 'basic', note } = (await req.json()) as { email?: string; plan?: Plan; note?: string };
   if (!email) return NextResponse.json({ error: 'email obrigatório' }, { status: 400 });
 
   const entry: WhitelistEntry = {
     email: email.trim().toLowerCase(),
+    plan,
     source: 'manual',
     note,
     addedAt: new Date().toISOString(),
@@ -39,6 +40,24 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ data: entry }, { status: 201 });
+}
+
+export async function PATCH(req: Request) {
+  const ac = await requireAdmin();
+  if (!ac.ok) return NextResponse.json({ error: 'no auth' }, { status: ac.status });
+  const { email, plan } = (await req.json()) as { email?: string; plan?: Plan };
+  if (!email || !plan) return NextResponse.json({ error: 'email e plan obrigatórios' }, { status: 400 });
+
+  const e = email.trim().toLowerCase();
+  const updated = await mutateDB((db) => {
+    const idx = db.whitelist.findIndex((w) => w.email === e);
+    if (idx === -1) return null;
+    db.whitelist[idx] = { ...db.whitelist[idx], plan };
+    return db.whitelist[idx];
+  });
+
+  if (!updated) return NextResponse.json({ error: 'não encontrado' }, { status: 404 });
+  return NextResponse.json({ data: updated });
 }
 
 export async function DELETE(req: Request) {

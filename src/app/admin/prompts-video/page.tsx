@@ -6,26 +6,24 @@ import type { VideoPromptDB } from '@/lib/db/types';
 
 const fields: FieldDef[] = [
   { name: 'title', label: 'Título', type: 'text', required: true },
-  { name: 'videoUrl', label: 'URL do vídeo (mp4/webm em loop)', type: 'url', required: true,
-    helper: 'Vídeo curto vertical que aparece em loop sem som.' },
-  { name: 'thumb', label: 'URL thumbnail (fallback)', type: 'image' },
-  { name: 'category', label: 'Categoria', type: 'select', options: [
-    { value: 'UGC', label: 'UGC' }, { value: 'Antes/Depois', label: 'Antes/Depois' },
-    { value: 'Cinematic', label: 'Cinematic' }, { value: 'Unboxing', label: 'Unboxing' },
-    { value: 'Lifestyle', label: 'Lifestyle' }, { value: 'Tutorial', label: 'Tutorial' },
-  ], required: true },
+  { name: 'videoUrl', label: 'Vídeo de exemplo (mp4/webm)', type: 'media-video', required: true,
+    helper: 'Vídeo curto vertical que aparece em loop sem som no card.' },
+  { name: 'thumb', label: 'Thumbnail fallback (opcional)', type: 'media-image' },
+  { name: 'category', label: 'Categoria', type: 'text',
+    helper: 'Você define o nome da categoria livre. Ex: UGC, Antes/Depois, Beleza...' },
   { name: 'niche', label: 'Nicho', type: 'text' },
   { name: 'duration', label: 'Duração (ex: 0:08)', type: 'text' },
   { name: 'views', label: 'Views (número)', type: 'number' },
-  { name: 'platforms', label: 'Plataformas', type: 'list', placeholder: 'flow, nano-banana' },
-  { name: 'prompt', label: 'Prompt completo', type: 'textarea', required: true,
-    helper: 'O texto exato que o aluno vai copiar e colar no Flow/Nano Banana.' },
+  { name: 'promptFlow', label: 'Prompt para o Flow', type: 'textarea',
+    helper: 'O texto exato que o aluno vai copiar e colar no Google Flow.' },
+  { name: 'promptCreate', label: 'Prompt para o Create (Veo 3)', type: 'textarea',
+    helper: 'Versão do prompt adaptada para o Veo 3 Create. Pode ser diferente.' },
 ];
 
 export default function AdminPromptsVideoPage() {
   return (
     <>
-      <AdminHeader title="Prompts de vídeo" description="Banco de prompts validados para gerar vídeos." />
+      <AdminHeader title="Prompts de vídeo" description="Banco de prompts validados (Flow + Create)." />
       <EntityManager<VideoPromptDB>
         endpoint="/api/admin/video-prompts"
         fields={fields}

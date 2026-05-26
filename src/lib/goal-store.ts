@@ -3,18 +3,22 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type GoalSettings = {
-  videosPerDay: number;
-  monthlyGoal: number;
+  // Parâmetros novos (modelo de escalabilidade)
+  contas: number;          // 1 - 20
+  postsPorDia: number;     // 1 - 20 (por conta)
+  taxaConversao: number;   // 0.1 - 2 (em %)
+  ticketMedio: number;     // 20 - 300 (R$)
+  comissao: number;        // 8 - 15 (%)
 };
 
-const STORAGE_KEY = 'influlab.goal';
-const DEFAULT: GoalSettings = { videosPerDay: 2, monthlyGoal: 3000 };
-
-// Limite máximo de vídeos/dia exposto na calculadora
-export const MAX_VIDEOS_PER_DAY = 30;
-
-// Reais por vídeo postado consistente — calibrado para 3 vídeos/dia ≈ R$ 3.000/mês
-export const RPV = 33;
+const STORAGE_KEY = 'influlab.goal.v2';
+const DEFAULT: GoalSettings = {
+  contas: 3,
+  postsPorDia: 5,
+  taxaConversao: 0.5,
+  ticketMedio: 80,
+  comissao: 10,
+};
 
 function read(): GoalSettings {
   if (typeof window === 'undefined') return DEFAULT;
@@ -55,18 +59,38 @@ export function useGoal() {
   return { goal, setGoal };
 }
 
-export function projectMonthlyRevenue(videosPerDay: number) {
-  const totalVideosMonth = videosPerDay * 30;
-  const realistic = totalVideosMonth * RPV;
-  return {
-    realistic,
-    conservative: realistic * 0.55,
-    optimistic: realistic * 1.7,
-    totalVideosMonth,
-  };
-}
+export type ScenarioResult = {
+  label: string;
+  vendas: number;
+  faturamento: number;
+  comissao: number;
+};
 
-export function videosNeededForGoal(monthlyGoal: number): number {
-  if (monthlyGoal <= 0) return 0;
-  return Math.max(1, Math.ceil(monthlyGoal / RPV / 30));
+export function calcularProjecao(g: GoalSettings) {
+  const postsPorDia = g.contas * g.postsPorDia;
+  const postsMes = postsPorDia * 30;
+  const visualizacoesBase = 1000 + g.postsPorDia * 100;
+  const totalAudiencia = postsMes * visualizacoesBase;
+  const taxa = g.taxaConversao / 100;
+  const comissao = g.comissao / 100;
+
+  const cenarios: ScenarioResult[] = (
+    [
+      { label: 'Conservador', cMult: 0.5, tMult: 0.8 },
+      { label: 'Moderado', cMult: 1.0, tMult: 1.0 },
+      { label: 'Agressivo', cMult: 1.8, tMult: 1.2 },
+    ] as const
+  ).map((c) => {
+    const vendas = Math.round(totalAudiencia * taxa * c.cMult);
+    const faturamento = vendas * (g.ticketMedio * c.tMult);
+    const comissaoFinal = faturamento * comissao;
+    return { label: c.label, vendas, faturamento, comissao: comissaoFinal };
+  });
+
+  return {
+    postsMes,
+    visualizacoesBase,
+    totalAudiencia,
+    cenarios,
+  };
 }

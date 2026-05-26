@@ -7,8 +7,20 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
+import { MediaUpload } from '@/components/admin/MediaUpload';
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'url' | 'image' | 'select' | 'tags' | 'list' | 'boolean';
+export type FieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'url'
+  | 'image'
+  | 'select'
+  | 'tags'
+  | 'list'
+  | 'boolean'
+  | 'media-image'
+  | 'media-video';
 
 export type FieldDef = {
   name: string;
@@ -300,7 +312,14 @@ function FieldInput({
         {field.label}
         {field.required && <span className="text-red-400 ml-1">*</span>}
       </label>
-      {field.type === 'textarea' ? (
+      {field.type === 'media-image' || field.type === 'media-video' ? (
+        <MediaUpload
+          accept={field.type === 'media-image' ? 'image' : 'video'}
+          value={(v as string) ?? ''}
+          onChange={(url) => onChange(url)}
+          hint={field.helper}
+        />
+      ) : field.type === 'textarea' ? (
         <textarea
           required={field.required}
           value={(v as string) ?? ''}

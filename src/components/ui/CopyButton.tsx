@@ -9,23 +9,25 @@ import { useModels, withModelPrompt } from '@/lib/models-store';
 interface CopyButtonProps {
   text: string;
   label?: string;
+  copiedLabel?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
-  /**
-   * Se true (default), injeta o prompt do modelo ativo no topo do texto copiado.
-   * Use false em textos que não são prompts (ex: cópia genérica).
-   */
+  /** Se true (default), injeta o prompt do modelo ativo no topo do texto */
   injectModel?: boolean;
+  /** Mostrar @nome do modelo no botão quando ativo */
+  showModelHint?: boolean;
 }
 
 export function CopyButton({
   text,
   label = 'Copiar prompt',
+  copiedLabel,
   className,
   size = 'md',
   variant = 'primary',
   injectModel = true,
+  showModelHint = false,
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   const { active } = useModels();
@@ -42,6 +44,11 @@ export function CopyButton({
   };
 
   const usingModel = injectModel && !!active;
+  const displayLabel = copied
+    ? copiedLabel ?? (usingModel ? `Copiado com ${active?.name}!` : 'Copiado!')
+    : usingModel && showModelHint
+    ? `${label} · ${active?.name}`
+    : label;
 
   return (
     <Button
@@ -52,7 +59,7 @@ export function CopyButton({
       leftIcon={
         copied ? (
           <Check size={16} />
-        ) : usingModel ? (
+        ) : usingModel && showModelHint ? (
           <UserCircle size={16} />
         ) : (
           <Copy size={16} />
@@ -60,13 +67,7 @@ export function CopyButton({
       }
       title={usingModel ? `Copiará com modelo: ${active?.name}` : undefined}
     >
-      {copied
-        ? usingModel
-          ? `Copiado com ${active?.name}!`
-          : 'Copiado!'
-        : usingModel
-        ? `Copiar com ${active?.name}`
-        : label}
+      {displayLabel}
     </Button>
   );
 }

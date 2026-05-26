@@ -6,18 +6,13 @@ import type { ViralVideoDB } from '@/lib/db/types';
 
 const fields: FieldDef[] = [
   { name: 'title', label: 'Título', type: 'text', required: true },
-  { name: 'videoUrl', label: 'URL do vídeo viral', type: 'url', required: true },
-  { name: 'thumb', label: 'URL thumbnail', type: 'image' },
+  { name: 'videoUrl', label: 'Vídeo viral (mp4/webm)', type: 'media-video', required: true },
+  { name: 'thumb', label: 'Thumbnail fallback', type: 'media-image' },
   { name: 'views', label: 'Views (ex: "2.4M")', type: 'text' },
-  { name: 'category', label: 'Categoria', type: 'select', options: [
-    { value: 'POV', label: 'POV' }, { value: 'Storytime', label: 'Storytime' },
-    { value: 'Transformação', label: 'Transformação' }, { value: 'Listicle', label: 'Listicle' },
-  ], required: true },
-  { name: 'hook', label: 'Hook (gancho inicial)', type: 'textarea', required: true,
-    helper: 'A frase ou ação que prende nos primeiros segundos.' },
-  { name: 'instructions', label: 'Instruções (uma por vírgula)', type: 'tags',
-    placeholder: 'Grave em vertical, Use frases curtas, Mostre o produto...',
-    helper: 'Cada item separado por vírgula vira um passo no app.' },
+  { name: 'category', label: 'Categoria', type: 'text', required: true,
+    helper: 'Você define livre. Ex: POV, Storytime, Transformação...' },
+  { name: 'hook', label: 'Hook (gancho inicial)', type: 'textarea', required: true },
+  { name: 'instructions', label: 'Instruções (uma por vírgula)', type: 'tags' },
   { name: 'prompt', label: 'Prompt pra replicar', type: 'textarea', required: true },
 ];
 
