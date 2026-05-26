@@ -2,7 +2,7 @@
 
 import { Bell, Menu, Search } from 'lucide-react';
 import { useState } from 'react';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { ActiveModelChip } from '@/components/models/ActiveModelChip';
 
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [query, setQuery] = useState('');
@@ -38,7 +38,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
           </div>
         </div>
 
-        <ThemeToggle />
+        <ActiveModelChip />
 
         <button
           className="relative p-2.5 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"

@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   Calculator,
+  Users,
   Settings,
   HelpCircle,
   LogOut,
@@ -29,6 +30,7 @@ const navItems = [
 ];
 
 const toolsItems = [
+  { href: '/app/modelos', label: 'Modelos', icon: Users },
   { href: '/app/agenda', label: 'Agenda', icon: CalendarDays },
   { href: '/app/calculadora', label: 'Calculadora', icon: Calculator },
 ];
