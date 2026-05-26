@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Check,
   Copy,
+  Edit3,
   Plus,
   Save,
   Sparkles,
@@ -38,6 +39,7 @@ import {
   vibes,
 } from '@/components/models/options';
 import { buildModelPrompt, useModels, type Gender, type Model } from '@/lib/models-store';
+import { ModelCard } from '@/components/models/ModelCard';
 import { cn } from '@/lib/utils';
 
 type Step = 0 | 1 | 2 | 3;
@@ -141,89 +143,19 @@ export default function ModelosPage() {
           </Card>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((m, i) => {
-              const isActive = active?.id === m.id;
-              return (
-                <motion.div
-                  key={m.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                >
-                  <Card
-                    variant="glass"
-                    hoverable
-                    className={cn(
-                      'p-4 relative overflow-hidden',
-                      isActive && 'border-brand-violet-400/60 shadow-glow-violet',
-                    )}
-                  >
-                    {isActive && (
-                      <div className="absolute inset-0 bg-gradient-brand-soft opacity-30 pointer-events-none" />
-                    )}
-
-                    <div className="relative">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className={cn(
-                          'h-12 w-12 rounded-2xl flex items-center justify-center shrink-0',
-                          isActive
-                            ? 'bg-gradient-brand shadow-glow-brand'
-                            : 'bg-bg-elevated border border-border',
-                        )}>
-                          <UserCircle size={22} className={isActive ? 'text-white' : 'text-text-muted'} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <h3 className="font-semibold truncate">{m.name || 'Sem nome'}</h3>
-                            {isActive && (
-                              <Star size={12} className="text-amber-300 fill-amber-300 shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-[11px] text-text-muted">
-                            {m.gender === 'feminino' ? 'F' : 'M'} · {m.ageRange} · {m.ethnicity}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        <Badge className="text-[9px] px-1.5 py-0">{m.hairColor}</Badge>
-                        <Badge className="text-[9px] px-1.5 py-0">{m.eyeColor}</Badge>
-                        <Badge className="text-[9px] px-1.5 py-0">{m.vibe.split(' ')[0]}</Badge>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-1">
-                        {isActive ? (
-                          <Badge variant="success" className="col-span-3 text-center justify-center text-[10px] py-1">
-                            <Check size={11} /> Modelo ativo
-                          </Badge>
-                        ) : (
-                          <button
-                            onClick={() => setActive(m.id)}
-                            className="col-span-3 h-7 rounded-lg bg-bg-elevated border border-border hover:border-brand-violet-400/40 text-[10px] font-semibold text-text-secondary hover:text-text-primary transition inline-flex items-center justify-center gap-1"
-                          >
-                            <Star size={10} /> Marcar como ativo
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setEditing(m)}
-                          className="h-7 col-span-2 rounded-lg bg-bg-elevated border border-border hover:border-brand-cyan-400/40 text-[10px] font-semibold text-text-secondary hover:text-text-primary transition mt-1"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Remover ${m.name}?`)) remove(m.id);
-                          }}
-                          className="h-7 rounded-lg bg-bg-elevated border border-border text-text-muted hover:text-red-400 hover:border-red-400/40 transition mt-1 inline-flex items-center justify-center"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              );
-            })}
+            {items.map((m, i) => (
+              <ModelCard
+                key={m.id}
+                model={m}
+                isActive={active?.id === m.id}
+                delay={i * 0.04}
+                onActivate={() => setActive(m.id)}
+                onEdit={() => setEditing(m)}
+                onRemove={() => {
+                  if (confirm(`Remover ${m.name}?`)) remove(m.id);
+                }}
+              />
+            ))}
           </div>
         )}
       </section>
