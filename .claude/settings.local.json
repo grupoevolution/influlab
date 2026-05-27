@@ -21,7 +21,9 @@
       "Bash(/Users/iagobastos/Downloads/influlab/.env.local:*)",
       "Bash(curl -s -b /tmp/cookies.txt http://localhost:3000/admin -L)",
       "Bash(curl -s -c /tmp/prod-cookies.txt -X POST https://aplicativo-lab.ommpuj.easypanel.host/api/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"admin@influlab.io\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"InfluLab@Admin2026\"\"\"\"}')",
-      "Bash(curl -s -b /tmp/prod-cookies.txt -L https://aplicativo-lab.ommpuj.easypanel.host/admin)"
+      "Bash(curl -s -b /tmp/prod-cookies.txt -L https://aplicativo-lab.ommpuj.easypanel.host/admin)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(git push:*)"
     ]
   }
 }
