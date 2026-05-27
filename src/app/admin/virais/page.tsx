@@ -8,11 +8,11 @@ const fields: FieldDef[] = [
   { name: 'title', label: 'Título', type: 'text', required: true },
   { name: 'videoUrl', label: 'Vídeo viral (mp4/webm)', type: 'media-video', required: true },
   { name: 'thumb', label: 'Thumbnail fallback', type: 'media-image' },
-  { name: 'views', label: 'Views (ex: "2.4M")', type: 'text' },
   { name: 'category', label: 'Categoria', type: 'text', required: true,
-    helper: 'Você define livre. Ex: POV, Storytime, Transformação...' },
+    helper: 'Categoria livre. Ex: POV, Storytime, Transformação...' },
   { name: 'hook', label: 'Hook (gancho inicial)', type: 'textarea', required: true },
-  { name: 'instructions', label: 'Instruções (uma por vírgula)', type: 'tags' },
+  { name: 'instructions', label: 'Instruções (uma por vírgula)', type: 'tags',
+    helper: 'Cada item separado por vírgula vira um passo.' },
   { name: 'prompt', label: 'Prompt pra replicar', type: 'textarea', required: true },
 ];
 
@@ -25,7 +25,7 @@ export default function AdminViraisPage() {
         fields={fields}
         primaryField="title"
         imageField="thumb"
-        secondaryFields={['category', 'views']}
+        secondaryFields={['category']}
       />
     </>
   );

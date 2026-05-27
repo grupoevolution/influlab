@@ -6,10 +6,6 @@ import { seedIfEmpty } from './seed';
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
-let cache: Schema | null = null;
-let writeQueue: Promise<unknown> = Promise.resolve();
-let persistenceAvailable = true; // se falhar, vira false e roda em memória
-
 const EMPTY_SCHEMA: Schema = {
   products: [],
   videoPrompts: [],
@@ -24,56 +20,91 @@ const EMPTY_SCHEMA: Schema = {
   platformConfig: { kiwify: { enabled: true }, ticto: { enabled: true } },
 };
 
-async function ensureFile() {
-  if (!persistenceAvailable) return;
+// Estado global compartilhado entre requests (sobrevive a hot reload em dev).
+type DBGlobal = {
+  cache: Schema | null;
+  writeQueue: Promise<unknown>;
+  persistenceAvailable: boolean;
+  initPromise: Promise<void> | null;
+  lastError: string | null;
+};
+
+const g = globalThis as unknown as { __INFLULAB_DB__?: DBGlobal };
+if (!g.__INFLULAB_DB__) {
+  g.__INFLULAB_DB__ = {
+    cache: null,
+    writeQueue: Promise.resolve(),
+    persistenceAvailable: true,
+    initPromise: null,
+    lastError: null,
+  };
+}
+const state = g.__INFLULAB_DB__!;
+
+async function tryLoadFromDisk(): Promise<Schema | null> {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
-    try {
-      await fs.access(DB_FILE);
-    } catch {
-      const seeded = seedIfEmpty(EMPTY_SCHEMA);
-      await fs.writeFile(DB_FILE, JSON.stringify(seeded, null, 2), 'utf8');
-    }
   } catch (err) {
-    persistenceAvailable = false;
-    console.warn(
-      '[InfluLab DB] Persistência em disco indisponível. Rodando em memória.\n' +
-        'Para persistir dados entre reinicializações, monte um volume em /app/data no EasyPanel.\n' +
-        'Erro:',
-      err,
-    );
+    state.persistenceAvailable = false;
+    state.lastError = `mkdir ${DATA_DIR}: ${(err as Error).message}`;
+    return null;
   }
-}
-
-async function loadFromDisk(): Promise<Schema> {
-  await ensureFile();
-  if (!persistenceAvailable) {
-    return seedIfEmpty({ ...EMPTY_SCHEMA });
+  try {
+    await fs.access(DB_FILE);
+  } catch {
+    // Não existe ainda — cria com seed
+    try {
+      const seeded = seedIfEmpty(JSON.parse(JSON.stringify(EMPTY_SCHEMA)));
+      await fs.writeFile(DB_FILE, JSON.stringify(seeded, null, 2), 'utf8');
+      return seeded;
+    } catch (err) {
+      state.persistenceAvailable = false;
+      state.lastError = `write seed ${DB_FILE}: ${(err as Error).message}`;
+      return null;
+    }
   }
   try {
     const raw = await fs.readFile(DB_FILE, 'utf8');
     const parsed = JSON.parse(raw) as Partial<Schema>;
     return { ...EMPTY_SCHEMA, ...parsed };
-  } catch {
-    return seedIfEmpty({ ...EMPTY_SCHEMA });
+  } catch (err) {
+    state.lastError = `read ${DB_FILE}: ${(err as Error).message}`;
+    return null;
+  }
+}
+
+async function initialize(): Promise<void> {
+  if (state.cache) return;
+  const fromDisk = await tryLoadFromDisk();
+  if (fromDisk) {
+    state.cache = fromDisk;
+  } else {
+    // Fallback: roda em memória global com seed
+    state.cache = seedIfEmpty(JSON.parse(JSON.stringify(EMPTY_SCHEMA)));
   }
 }
 
 export async function getDB(): Promise<Schema> {
-  if (cache) return cache;
-  cache = await loadFromDisk();
-  return cache;
+  if (!state.cache) {
+    if (!state.initPromise) {
+      state.initPromise = initialize();
+    }
+    await state.initPromise;
+  }
+  return state.cache!;
 }
 
 async function flushToDisk() {
-  if (!cache || !persistenceAvailable) return;
+  if (!state.cache || !state.persistenceAvailable) return;
   try {
     const tmp = DB_FILE + '.tmp';
-    await fs.writeFile(tmp, JSON.stringify(cache, null, 2), 'utf8');
+    await fs.writeFile(tmp, JSON.stringify(state.cache, null, 2), 'utf8');
     await fs.rename(tmp, DB_FILE);
   } catch (err) {
-    console.warn('[InfluLab DB] Falha ao salvar:', err);
-    persistenceAvailable = false;
+    state.persistenceAvailable = false;
+    state.lastError = `flush: ${(err as Error).message}`;
+    // eslint-disable-next-line no-console
+    console.warn('[InfluLab DB] Falha ao salvar em disco. Continuando em memória.', err);
   }
 }
 
@@ -84,20 +115,20 @@ export async function mutateDB<T>(fn: (db: Schema) => T | Promise<T>): Promise<T
     await flushToDisk();
     return result;
   };
-  const p = writeQueue.then(run, run);
-  writeQueue = p.then(
+  const p = state.writeQueue.then(run, run);
+  state.writeQueue = p.then(
     () => undefined,
     () => undefined,
   );
   return p;
 }
 
+type ArrItem<K extends SchemaArrayKey> = Schema[K] extends ReadonlyArray<infer U> ? U : never;
+
 export async function listAll<K extends SchemaArrayKey>(key: K): Promise<Schema[K]> {
   const db = await getDB();
   return db[key];
 }
-
-type ArrItem<K extends SchemaArrayKey> = Schema[K] extends ReadonlyArray<infer U> ? U : never;
 
 export async function findById<K extends SchemaArrayKey>(
   key: K,
@@ -142,7 +173,7 @@ export async function deleteOne<K extends SchemaArrayKey>(key: K, id: string): P
     const arr = db[key] as unknown as { id: string }[];
     const before = arr.length;
     const next = arr.filter((item) => item.id !== id);
-    (db[key] as unknown) = next;
+    (db as unknown as Record<string, unknown>)[key as string] = next;
     return next.length < before;
   });
 }
@@ -158,11 +189,11 @@ export async function isEmailWhitelisted(email: string): Promise<boolean> {
   return (await getEmailAccess(email)).allowed;
 }
 
-/** Verifica se o email tem acesso e qual é o plano (basic / pro) */
-export async function getEmailAccess(email: string): Promise<{ allowed: boolean; plan: 'basic' | 'pro' | null }> {
+export async function getEmailAccess(
+  email: string,
+): Promise<{ allowed: boolean; plan: 'basic' | 'pro' | null }> {
   const e = email.trim().toLowerCase();
 
-  // Envs PRO sempre acessam tudo
   const envAllowedPro = (process.env.DEFAULT_ALLOWED_EMAILS ?? '')
     .split(',')
     .map((s) => s.trim().toLowerCase())
@@ -181,5 +212,27 @@ export async function getActiveAnnouncement() {
 }
 
 export function isPersistenceAvailable(): boolean {
-  return persistenceAvailable;
+  return state.persistenceAvailable;
+}
+
+export function getDiagnostic() {
+  return {
+    persistenceAvailable: state.persistenceAvailable,
+    cacheLoaded: !!state.cache,
+    dataDir: DATA_DIR,
+    dbFile: DB_FILE,
+    lastError: state.lastError,
+    counts: state.cache
+      ? {
+          products: state.cache.products.length,
+          videoPrompts: state.cache.videoPrompts.length,
+          imagePrompts: state.cache.imagePrompts.length,
+          virals: state.cache.virals.length,
+          creators: state.cache.creators.length,
+          whitelist: state.cache.whitelist.length,
+          announcements: state.cache.announcements.length,
+          accessLog: state.cache.accessLog.length,
+        }
+      : null,
+  };
 }

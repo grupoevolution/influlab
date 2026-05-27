@@ -10,14 +10,11 @@ const fields: FieldDef[] = [
     helper: 'Vídeo curto vertical que aparece em loop sem som no card.' },
   { name: 'thumb', label: 'Thumbnail fallback (opcional)', type: 'media-image' },
   { name: 'category', label: 'Categoria', type: 'text',
-    helper: 'Você define o nome da categoria livre. Ex: UGC, Antes/Depois, Beleza...' },
-  { name: 'niche', label: 'Nicho', type: 'text' },
-  { name: 'duration', label: 'Duração (ex: 0:08)', type: 'text' },
-  { name: 'views', label: 'Views (número)', type: 'number' },
+    helper: 'Categoria livre. Ex: UGC, Antes/Depois, Beleza...' },
   { name: 'promptFlow', label: 'Prompt para o Flow', type: 'textarea',
     helper: 'O texto exato que o aluno vai copiar e colar no Google Flow.' },
   { name: 'promptCreate', label: 'Prompt para o Create (Veo 3)', type: 'textarea',
-    helper: 'Versão do prompt adaptada para o Veo 3 Create. Pode ser diferente.' },
+    helper: 'Versão adaptada para o Veo 3 Create.' },
 ];
 
 export default function AdminPromptsVideoPage() {

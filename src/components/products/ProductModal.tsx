@@ -159,15 +159,14 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
             </div>
 
             {product.videoTranscription && (
-              <Button
-                variant="secondary"
-                size="md"
-                className="w-full"
-                leftIcon={<FileText size={14} />}
+              <button
+                type="button"
                 onClick={() => setTranscriptOpen(true)}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-brand-cyan-500/20 to-brand-violet-500/20 border border-brand-cyan-400/40 text-sm font-semibold text-brand-cyan-200 hover:from-brand-cyan-500/30 hover:to-brand-violet-500/30 transition inline-flex items-center justify-center gap-2"
               >
+                <FileText size={14} />
                 Ver transcrição do vídeo
-              </Button>
+              </button>
             )}
 
             <Button

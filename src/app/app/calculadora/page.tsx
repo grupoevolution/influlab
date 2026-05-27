@@ -1,28 +1,29 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, Info, Percent, Save, Target, TrendingUp, Users, Video } from 'lucide-react';
+import { Check, Info, Minus, Plus, Save, Target, TrendingUp, Users, Video } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { CircuitDecor } from '@/components/brand/CircuitDecor';
 import { calcularProjecao, postsParaBaterMeta, useGoal, type GoalSettings } from '@/lib/goal-store';
-import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 const META_MIN = 500;
 const META_MAX = 50000;
 const META_STEP = 250;
 const POSTS_MIN = 1;
 const POSTS_MAX = 20;
-const COMISSAO_MIN = 8;
-const COMISSAO_MAX = 15;
+const CONTAS_MIN = 1;
 const CONTAS_MAX = 10;
+const COMISSAO_DEFAULT = 10;
 
+// Renomeação dos cenários
 const SCENARIO_STYLES = {
-  Conservador: { color: 'text-amber-300', bg: 'from-amber-500/15 to-amber-400/5', border: 'border-amber-400/30' },
-  Moderado: { color: 'text-brand-cyan-300', bg: 'from-brand-cyan-500/15 to-brand-cyan-400/5', border: 'border-brand-cyan-400/30' },
-  Agressivo: { color: 'text-emerald-300', bg: 'from-emerald-500/15 to-emerald-400/5', border: 'border-emerald-400/30' },
+  realista: { label: 'Cenário realista', color: 'text-brand-cyan-300', bg: 'from-brand-cyan-500/15 to-brand-cyan-400/5', border: 'border-brand-cyan-400/30' },
+  baseSegura: { label: 'Base segura', color: 'text-amber-300', bg: 'from-amber-500/15 to-amber-400/5', border: 'border-amber-400/30' },
+  topPerformer: { label: 'Top performer', color: 'text-emerald-300', bg: 'from-emerald-500/15 to-emerald-400/5', border: 'border-emerald-400/30' },
 };
 
 export default function CalculadoraPage() {
@@ -30,10 +31,9 @@ export default function CalculadoraPage() {
   const [local, setLocal] = useState<GoalSettings>(goal);
   const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [lastChanged, setLastChanged] = useState<'meta' | 'posts' | null>(null);
 
   useEffect(() => {
-    setLocal(goal);
+    setLocal({ ...goal, comissao: COMISSAO_DEFAULT });
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -43,14 +43,16 @@ export default function CalculadoraPage() {
     [local.contas, local.postsPorDia, local.comissao],
   );
 
-  // Quando muda a META, recalcula posts/dia
+  // Pega resultados nomeados
+  const baseSegura = projection.cenarios[0]; // Conservador
+  const realista = projection.cenarios[1];   // Moderado
+  const topPerformer = projection.cenarios[2]; // Agressivo
+
   const onMetaChange = (value: number) => {
     const posts = postsParaBaterMeta(value, local.contas, local.comissao);
     setLocal((g) => ({ ...g, metaMensal: value, postsPorDia: posts }));
-    setLastChanged('meta');
   };
 
-  // Quando muda POSTS/DIA, atualiza meta para refletir o moderado dessa configuração
   const onPostsChange = (value: number) => {
     const proj = calcularProjecao(local.contas, value, local.comissao);
     const novaMeta = Math.round(proj.cenarios[1].comissao / META_STEP) * META_STEP;
@@ -59,18 +61,12 @@ export default function CalculadoraPage() {
       postsPorDia: value,
       metaMensal: Math.min(META_MAX, Math.max(META_MIN, novaMeta)),
     }));
-    setLastChanged('posts');
   };
 
-  // Quando muda contas, recalcula posts baseado na meta atual
   const onContasChange = (value: number) => {
-    const posts = postsParaBaterMeta(local.metaMensal, value, local.comissao);
-    setLocal((g) => ({ ...g, contas: value, postsPorDia: posts }));
-  };
-
-  const onComissaoChange = (value: number) => {
-    const posts = postsParaBaterMeta(local.metaMensal, local.contas, value);
-    setLocal((g) => ({ ...g, comissao: value, postsPorDia: posts }));
+    const clamped = Math.max(CONTAS_MIN, Math.min(CONTAS_MAX, value));
+    const posts = postsParaBaterMeta(local.metaMensal, clamped, local.comissao);
+    setLocal((g) => ({ ...g, contas: clamped, postsPorDia: posts }));
   };
 
   const save = () => {
@@ -83,7 +79,6 @@ export default function CalculadoraPage() {
 
   const metaPct = ((local.metaMensal - META_MIN) / (META_MAX - META_MIN)) * 100;
   const postsPct = ((local.postsPorDia - POSTS_MIN) / (POSTS_MAX - POSTS_MIN)) * 100;
-  const comissaoPct = ((local.comissao - COMISSAO_MIN) / (COMISSAO_MAX - COMISSAO_MIN)) * 100;
 
   return (
     <>
@@ -98,45 +93,49 @@ export default function CalculadoraPage() {
 
       <section className="px-4 md:px-8 py-6">
         <div className="max-w-3xl mx-auto space-y-5">
-          {/* Contas (cards) */}
+          {/* Contas com +/- */}
           <Card variant="glass" className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-brand-violet-300">
-                <Users size={13} />
-                Quantas contas do TikTok você tem?
-              </label>
-              <span className="text-xl font-display font-bold text-text-primary">
-                {local.contas} {local.contas === 1 ? 'conta' : 'contas'}
-              </span>
-            </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-brand-violet-300">
+                  <Users size={13} />
+                  Quantas contas do TikTok você tem?
+                </label>
+                <p className="text-[11px] text-text-muted mt-1">
+                  Cada conta posta a quantidade definida abaixo.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
-              {Array.from({ length: CONTAS_MAX }, (_, i) => i + 1).map((n) => {
-                const active = local.contas === n;
-                return (
-                  <motion.button
-                    key={n}
-                    type="button"
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onContasChange(n)}
-                    className={cn(
-                      'relative h-12 rounded-xl border transition text-sm font-display font-bold',
-                      active
-                        ? 'bg-gradient-brand text-white border-transparent shadow-glow-brand'
-                        : 'bg-bg-elevated border-border text-text-muted hover:text-text-primary hover:border-brand-violet-400/40',
-                    )}
-                  >
-                    {n}
-                  </motion.button>
-                );
-              })}
+              <div className="inline-flex items-center bg-bg-elevated border border-border rounded-2xl p-1">
+                <button
+                  type="button"
+                  onClick={() => onContasChange(local.contas - 1)}
+                  disabled={local.contas <= CONTAS_MIN}
+                  className="h-10 w-10 rounded-xl bg-bg hover:bg-bg-card disabled:opacity-30 disabled:cursor-not-allowed text-text-secondary hover:text-text-primary transition inline-flex items-center justify-center"
+                  aria-label="Diminuir"
+                >
+                  <Minus size={14} />
+                </button>
+                <div className="px-5 min-w-[80px] text-center">
+                  <div className="text-2xl font-display font-bold leading-none">{local.contas}</div>
+                  <div className="text-[9px] uppercase tracking-widest text-text-muted mt-0.5">
+                    {local.contas === 1 ? 'conta' : 'contas'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onContasChange(local.contas + 1)}
+                  disabled={local.contas >= CONTAS_MAX}
+                  className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand disabled:opacity-30 disabled:cursor-not-allowed text-white inline-flex items-center justify-center active:brightness-110"
+                  aria-label="Aumentar"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
             </div>
-            <p className="text-[10px] text-text-subtle mt-2">
-              Mais contas = mais alcance distribuído. Cada conta posta a quantidade definida abaixo.
-            </p>
           </Card>
 
-          {/* Cards de meta + posts/dia */}
+          {/* Meta + posts */}
           <Card variant="glass" className="relative overflow-hidden p-5 space-y-5">
             <CircuitDecor className="absolute inset-0 w-full h-full opacity-15 pointer-events-none" />
 
@@ -164,8 +163,9 @@ export default function CalculadoraPage() {
               />
               <div className="flex justify-between text-[10px] text-text-muted mt-1">
                 <span>R$ 500</span>
-                <span>R$ 10k</span>
+                <span>R$ 12,5k</span>
                 <span>R$ 25k</span>
+                <span>R$ 37,5k</span>
                 <span>R$ 50k</span>
               </div>
             </div>
@@ -200,52 +200,35 @@ export default function CalculadoraPage() {
                 <span>15</span>
                 <span>20</span>
               </div>
-              <p className="text-[10px] text-brand-cyan-300/80 mt-2 leading-relaxed">
-                {lastChanged === 'meta'
-                  ? `Pra bater ${formatCurrency(local.metaMensal)}/mês, você precisa de ${local.postsPorDia} vídeo${local.postsPorDia > 1 ? 's' : ''}/dia em cada uma das ${local.contas} conta${local.contas > 1 ? 's' : ''}.`
-                  : `Total: ${local.contas * local.postsPorDia} vídeos/dia · ${local.contas * local.postsPorDia * 30} no mês.`}
+              <p className="text-[11px] text-brand-cyan-300/80 mt-2 leading-relaxed">
+                Total: <strong>{local.contas * local.postsPorDia} vídeos/dia</strong> ·{' '}
+                {local.contas * local.postsPorDia * 30} no mês.
               </p>
             </div>
 
+            {/* Aviso de comissão (sem slider) */}
             <div className="relative pt-3 border-t border-border-subtle">
-              <div className="flex items-center justify-between mb-2 gap-2">
-                <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-amber-300">
-                  <Percent size={13} />
-                  Comissão de afiliado
-                </label>
-                <span className="text-2xl font-display font-bold">{local.comissao}%</span>
-              </div>
-              <input
-                type="range"
-                min={COMISSAO_MIN}
-                max={COMISSAO_MAX}
-                step={1}
-                value={local.comissao}
-                onChange={(e) => onComissaoChange(Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #F59E0B 0%, #7C3AED ${comissaoPct}%, rgb(var(--c-bg-elevated)) ${comissaoPct}%, rgb(var(--c-bg-elevated)) 100%)`,
-                }}
-              />
-              <div className="flex justify-between text-[10px] text-text-muted mt-1">
-                <span>8%</span>
-                <span>10%</span>
-                <span>12%</span>
-                <span>14%</span>
-                <span>15%</span>
-              </div>
-              <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/10 border border-amber-400/30 p-2">
-                <Info size={12} className="text-amber-300 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-amber-200 leading-relaxed">
-                  <strong>Dica:</strong> dê preferência a produtos com pelo menos <strong>10% de comissão</strong>. Comissões mais altas escalam muito mais rápido.
-                </p>
+              <div className="rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-400/5 border border-amber-400/40 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center shrink-0">
+                    <Info size={18} className="text-amber-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-amber-200 mb-1">
+                      Sempre escolha produtos com pelo menos 10% de comissão
+                    </p>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      A calculadora usa <strong className="text-amber-200">10% como base</strong> pra projeção. Comissões mais altas escalam muito mais rápido — sempre dê preferência.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
 
-          {/* Audiência base */}
+          {/* CARD PRINCIPAL — Cenário Realista (Moderado) com destaque */}
           <motion.div
-            key={projection.totalAudiencia}
+            key={realista.comissao}
             initial={{ opacity: 0.6, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -253,41 +236,49 @@ export default function CalculadoraPage() {
           >
             <div className="absolute inset-0 bg-gradient-brand opacity-90" />
             <div className="absolute inset-0 bg-gradient-mesh opacity-40" />
-            <div className="relative p-5 text-white text-center">
+            <div className="relative p-6 text-white text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-80 mb-1">
-                Audiência base estimada
+                Sua comissão mensal esperada
               </p>
-              <p className="text-3xl md:text-4xl font-display font-bold leading-none">
-                {formatNumber(projection.totalAudiencia)} <span className="text-sm font-normal opacity-80">views/mês</span>
+              <p className="text-4xl md:text-5xl font-display font-bold leading-none mb-2 drop-shadow">
+                {formatCurrency(realista.comissao)}
               </p>
-              <p className="text-[11px] opacity-80 mt-1">
-                {projection.postsMes.toLocaleString('pt-BR')} posts no mês ·{' '}
-                {projection.visualizacoesBase.toLocaleString('pt-BR')} views/post (base)
+              <p className="text-xs opacity-85">
+                ≈ {realista.vendas.toLocaleString('pt-BR')} vendas no mês
               </p>
             </div>
           </motion.div>
 
-          {/* Cenários */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {projection.cenarios.map((c) => {
-              const style = SCENARIO_STYLES[c.label];
-              return (
-                <Card key={c.label} variant="glass" className="relative overflow-hidden">
-                  <div className={`absolute inset-0 bg-gradient-to-br opacity-50 ${style.bg}`} />
-                  <div className={`relative p-4 border-l-2 ${style.border}`}>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${style.color}`}>
-                      {c.label}
-                    </p>
-                    <p className={`text-2xl md:text-3xl font-display font-bold mb-1 ${style.color}`}>
-                      {formatCurrency(c.comissao)}
-                    </p>
-                    <div className="text-[11px] text-text-muted space-y-0.5">
-                      <p>{c.vendas.toLocaleString('pt-BR')} vendas/mês</p>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+          {/* Cenários secundários */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card variant="glass" className="relative overflow-hidden">
+              <div className={`absolute inset-0 bg-gradient-to-br opacity-50 ${SCENARIO_STYLES.baseSegura.bg}`} />
+              <div className={`relative p-4 border-l-2 ${SCENARIO_STYLES.baseSegura.border}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${SCENARIO_STYLES.baseSegura.color}`}>
+                  {SCENARIO_STYLES.baseSegura.label}
+                </p>
+                <p className={`text-xl md:text-2xl font-display font-bold mb-0.5 ${SCENARIO_STYLES.baseSegura.color}`}>
+                  {formatCurrency(baseSegura.comissao)}
+                </p>
+                <p className="text-[10px] text-text-muted">
+                  {baseSegura.vendas.toLocaleString('pt-BR')} vendas/mês
+                </p>
+              </div>
+            </Card>
+            <Card variant="glass" className="relative overflow-hidden">
+              <div className={`absolute inset-0 bg-gradient-to-br opacity-50 ${SCENARIO_STYLES.topPerformer.bg}`} />
+              <div className={`relative p-4 border-l-2 ${SCENARIO_STYLES.topPerformer.border}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${SCENARIO_STYLES.topPerformer.color}`}>
+                  {SCENARIO_STYLES.topPerformer.label}
+                </p>
+                <p className={`text-xl md:text-2xl font-display font-bold mb-0.5 ${SCENARIO_STYLES.topPerformer.color}`}>
+                  {formatCurrency(topPerformer.comissao)}
+                </p>
+                <p className="text-[10px] text-text-muted">
+                  {topPerformer.vendas.toLocaleString('pt-BR')} vendas/mês
+                </p>
+              </div>
+            </Card>
           </div>
 
           {/* Insight */}
@@ -297,13 +288,13 @@ export default function CalculadoraPage() {
               <div>
                 <p className="text-sm text-text-secondary leading-relaxed">
                   Com <strong className="text-text-primary">{local.contas} conta{local.contas > 1 ? 's' : ''}</strong> postando{' '}
-                  <strong className="text-text-primary">{local.postsPorDia} vídeo{local.postsPorDia > 1 ? 's' : ''}/dia</strong>{' '}
-                  com produtos de <strong className="text-text-primary">{local.comissao}% de comissão</strong>, sua projeção
-                  moderada é{' '}
+                  <strong className="text-text-primary">{local.postsPorDia} vídeo{local.postsPorDia > 1 ? 's' : ''}/dia</strong>, sua projeção realista é{' '}
                   <strong className="text-emerald-300">
-                    {formatCurrency(projection.cenarios[1].comissao)}/mês
-                  </strong>
-                  .
+                    {formatCurrency(realista.comissao)}/mês
+                  </strong>.
+                </p>
+                <p className="text-[11px] text-text-muted mt-1.5 leading-relaxed">
+                  <strong className="text-text-secondary">Base segura</strong> é o pior caso esperado. <strong className="text-text-secondary">Top performer</strong> é o que os melhores alunos batem com consistência + virais.
                 </p>
               </div>
             </div>
@@ -317,10 +308,6 @@ export default function CalculadoraPage() {
           >
             {saved ? 'Configurações salvas!' : 'Salvar configurações'}
           </Button>
-
-          <p className="text-[10px] text-text-subtle text-center leading-relaxed">
-            Modelo baseado em criadores InfluLab: 0.5% de conversão média e ticket médio de R$ 80. Audiência base = 1000 + (posts/dia × 100) views/post.
-          </p>
         </div>
       </section>
     </>
