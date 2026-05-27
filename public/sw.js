@@ -1,12 +1,22 @@
-// Service Worker básico para PWA InfluLab.
-// Estratégia: network-first para HTML, cache-first para assets estáticos.
+// Service Worker do PWA InfluLab.
+// Estratégia:
+//   - APIs (/api/*) e Next.js data (_next/data): SEMPRE rede, nunca cache.
+//   - HTML navegado: network-first com fallback offline.
+//   - Assets estáticos (_next/static, /icons, fontes, etc): cache-first.
+//
+// IMPORTANTE: ao mudar a estratégia, suba CACHE_VERSION para invalidar caches antigos
+// nos dispositivos dos usuários (o activate apaga tudo que não bater com o nome atual).
 
-const CACHE_NAME = 'influlab-v1';
+const CACHE_VERSION = 'v3';
+const CACHE_NAME = `influlab-${CACHE_VERSION}`;
 const PRECACHE_URLS = ['/', '/app', '/login', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -19,6 +29,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Mensagem útil pro client forçar atualização ("skip waiting") se um SW novo estiver pendente.
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+function isApiRequest(url) {
+  return url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/data/');
+}
+
+function isStaticAsset(url) {
+  return (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.startsWith('/fonts/') ||
+    /\.(?:js|css|woff2?|ttf|otf|png|jpg|jpeg|gif|webp|svg|ico)$/i.test(url.pathname)
+  );
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -26,13 +54,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== location.origin) return;
 
-  // HTML: network-first
+  // 1) APIs e dados Next.js: NUNCA cachear. Vai direto pra rede.
+  if (isApiRequest(url)) return; // deixa o fetch padrão acontecer
+
+  // 2) Navegação HTML: network-first, com fallback ao /app offline.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(request, copy));
+          caches.open(CACHE_NAME).then((c) => c.put(request, copy)).catch(() => {});
           return res;
         })
         .catch(() => caches.match(request).then((r) => r || caches.match('/app'))),
@@ -40,18 +71,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets: cache-first
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((res) => {
-        if (!res || res.status !== 200 || res.type !== 'basic') return res;
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((c) => c.put(request, copy));
-        return res;
-      });
-    }),
-  );
+  // 3) Assets estáticos: cache-first.
+  if (isStaticAsset(url)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((res) => {
+          if (!res || res.status !== 200 || res.type !== 'basic') return res;
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(request, copy)).catch(() => {});
+          return res;
+        });
+      }),
+    );
+    return;
+  }
+
+  // 4) Qualquer outro GET: deixa o navegador resolver normalmente (sem cache do SW).
 });
 
 // Notifications (preparado para integração futura)
