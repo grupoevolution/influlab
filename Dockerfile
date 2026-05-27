@@ -1,13 +1,14 @@
 # --- Build stage ----------------------------------------------------------
 FROM node:20-alpine AS deps
 WORKDIR /app
-RUN apk add --no-cache libc6-compat vips-dev
+# libc6-compat permite o sharp usar seus binários pré-compilados (linuxmusl) no Alpine
+RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache libc6-compat vips-dev
+RUN apk add --no-cache libc6-compat
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -22,8 +23,8 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DATA_DIR=/app/data
 
-# libc6-compat + vips são necessários para o sharp rodar (upload/compressão de imagem)
-RUN apk add --no-cache libc6-compat vips
+# libc6-compat sozinho basta — o sharp já vem com seu vips embutido (@img/sharp-libvips-linuxmusl-*)
+RUN apk add --no-cache libc6-compat
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
