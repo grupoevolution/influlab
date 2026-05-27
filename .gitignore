@@ -20,6 +20,9 @@
 .idea
 .vscode
 
+# Claude Code (config local — não vai para o deploy)
+.claude/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
