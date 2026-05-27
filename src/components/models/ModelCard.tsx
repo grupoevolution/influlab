@@ -5,7 +5,7 @@ import { Check, Copy, Edit3, Star, Trash2, UserCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
-import { buildModelPrompt, type Model } from '@/lib/models-store';
+import { buildModelBasePrompt, type Model } from '@/lib/models-store';
 import { cn } from '@/lib/utils';
 
 interface ModelCardProps {
@@ -29,7 +29,7 @@ export function ModelCard({
 
   const copyPrompt = async () => {
     try {
-      const text = buildModelPrompt(m);
+      const text = buildModelBasePrompt(m);
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -123,7 +123,7 @@ export function ModelCard({
             ) : (
               <>
                 <Copy size={15} />
-                Copiar prompt
+                Copiar prompt da foto-base
               </>
             )}
           </button>

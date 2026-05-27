@@ -97,47 +97,36 @@ export default function CriadoresPage() {
                     )}
 
                     <div className="relative flex items-center gap-3 md:gap-4">
-                      {/* Posição */}
-                      <div className="shrink-0 w-9 md:w-12 text-center">
+                      {/* Posição em destaque (sem foto) */}
+                      <div className="shrink-0 w-14 md:w-16 flex flex-col items-center justify-center">
                         {isTop3 ? (
-                          <div className="inline-flex flex-col items-center gap-0.5">
-                            <MedalIcon kind={medal.icon} className={medal.iconColor} />
-                            <span className={cn('font-display font-bold text-lg leading-none', medal.iconColor)}>
+                          <>
+                            <MedalIcon kind={medal.icon} className={cn(medal.iconColor, 'mb-0.5')} />
+                            <span className={cn('font-display font-black text-2xl md:text-3xl leading-none', medal.iconColor)}>
                               {c.position}
                             </span>
-                          </div>
+                          </>
                         ) : (
-                          <span className="font-display font-bold text-xl md:text-2xl text-text-muted">
-                            {c.position}
-                          </span>
+                          <>
+                            <span className="text-[9px] uppercase tracking-widest text-text-subtle leading-none mb-0.5">#</span>
+                            <span className="font-display font-black text-2xl md:text-3xl leading-none text-text-secondary">
+                              {c.position}
+                            </span>
+                          </>
                         )}
-                      </div>
-
-                      {/* Avatar */}
-                      <div className="relative shrink-0">
-                        {isTop3 && (
-                          <div className={cn('absolute inset-0 rounded-full blur opacity-50', medal.bg.includes('amber') ? 'bg-amber-400' : medal.bg.includes('slate') ? 'bg-slate-300' : 'bg-orange-400')} />
-                        )}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={c.avatar}
-                          alt={c.name}
-                          className={cn(
-                            'relative h-11 w-11 md:h-12 md:w-12 rounded-full object-cover border-2',
-                            isTop3 ? medal.ring : 'border-brand-violet-400/30',
-                          )}
-                        />
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                           <h3 className="font-semibold text-sm md:text-base truncate">{c.name}</h3>
-                          <Badge variant="brand" className="hidden sm:inline-flex text-[10px] px-1.5 py-0">{c.niche}</Badge>
+                          {c.niche && (
+                            <Badge variant="brand" className="text-[10px] px-1.5 py-0">{c.niche}</Badge>
+                          )}
                         </div>
                         <p className="text-xs text-text-muted truncate">
                           {c.username}
-                          <span className="hidden md:inline"> · {c.followers} seguidores</span>
+                          {c.followers && <span className="hidden md:inline"> · {c.followers} seguidores</span>}
                         </p>
                       </div>
 

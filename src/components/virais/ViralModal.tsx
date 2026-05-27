@@ -9,6 +9,10 @@ import type { ViralVideoDB as ViralVideo } from '@/lib/db/types';
 export function ViralModal({ video, open, onClose }: { video: ViralVideo | null; open: boolean; onClose: () => void }) {
   if (!video) return null;
 
+  // Defesa: campos opcionais que podem vir undefined quando o item é criado sem preencher tudo
+  const instructions = Array.isArray(video.instructions) ? video.instructions : [];
+  const promptText = video.prompt ?? '';
+
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <div className="grid grid-cols-1 md:grid-cols-2">
@@ -29,47 +33,57 @@ export function ViralModal({ video, open, onClose }: { video: ViralVideo | null;
             <Badge variant="live">
               <Flame size={11} /> Viral
             </Badge>
-            <Badge variant="default">
-              <Eye size={11} /> {video.views}
-            </Badge>
+            {video.views && (
+              <Badge variant="default">
+                <Eye size={11} /> {video.views}
+              </Badge>
+            )}
           </div>
         </div>
 
         {/* Conteúdo */}
         <div className="p-6 md:p-8">
-          <Badge variant="cyan" className="mb-3">{video.category}</Badge>
+          {video.category && <Badge variant="cyan" className="mb-3">{video.category}</Badge>}
           <h2 className="text-2xl font-display font-bold leading-tight mb-4">{video.title}</h2>
 
-          <div className="glass rounded-xl p-3 mb-5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
-              🎯 Hook
-            </p>
-            <p className="text-sm text-text-secondary leading-relaxed">{video.hook}</p>
-          </div>
+          {video.hook && (
+            <div className="glass rounded-xl p-3 mb-5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
+                🎯 Hook
+              </p>
+              <p className="text-sm text-text-secondary leading-relaxed">{video.hook}</p>
+            </div>
+          )}
 
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-violet-300 mb-2">
-            📋 Passo a passo
-          </p>
-          <ol className="space-y-2.5 mb-5">
-            {video.instructions.map((inst, i) => (
-              <li key={i} className="flex gap-3 text-sm">
-                <span className="shrink-0 h-6 w-6 rounded-lg bg-brand-violet-500/20 text-brand-violet-200 text-xs font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <span className="text-text-secondary leading-relaxed pt-0.5">{inst}</span>
-              </li>
-            ))}
-          </ol>
+          {instructions.length > 0 && (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-violet-300 mb-2">
+                📋 Passo a passo
+              </p>
+              <ol className="space-y-2.5 mb-5">
+                {instructions.map((inst, i) => (
+                  <li key={i} className="flex gap-3 text-sm">
+                    <span className="shrink-0 h-6 w-6 rounded-lg bg-brand-violet-500/20 text-brand-violet-200 text-xs font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="text-text-secondary leading-relaxed pt-0.5">{inst}</span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
 
-          <div className="rounded-xl bg-bg-elevated border border-border p-3 mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
-              ✨ Prompt para o Flow
-            </p>
-            <p className="text-xs text-text-muted leading-relaxed font-mono">{video.prompt}</p>
-          </div>
+          {promptText && (
+            <div className="rounded-xl bg-bg-elevated border border-border p-3 mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
+                ✨ Prompt para o Flow
+              </p>
+              <p className="text-xs text-text-muted leading-relaxed font-mono whitespace-pre-wrap">{promptText}</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
-            <CopyButton text={video.prompt} label="Copiar prompt" size="md" />
+            <CopyButton text={promptText} label="Copiar prompt" size="md" />
             <a
               href="https://labs.google/flow"
               target="_blank"

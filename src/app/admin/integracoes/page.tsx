@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, Check, Copy, Crown, Plug, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Copy, Crown, Plug, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -97,15 +97,32 @@ function PlatformCard({
   onAddMapping: (m: Partial<PlatformProductMapping>) => void;
   onRemoveMapping: (id: string) => void;
 }) {
-  const [secret, setSecret] = useState(cfg.webhookSecret ?? '');
-  const [productId, setProductId] = useState('');
+  const [productIds, setProductIds] = useState('');
   const [productName, setProductName] = useState('');
   const [plan, setPlan] = useState<Plan>('basic');
 
-  useEffect(() => setSecret(cfg.webhookSecret ?? ''), [cfg.webhookSecret]);
-
   const webhookUrl = origin ? `${origin}/api/webhooks/${platform}` : '';
   const platformLabel = platform === 'kiwify' ? 'Kiwify' : 'Ticto';
+
+  const submitMapping = () => {
+    const ids = productIds
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    // Sem IDs, ainda permite mapear pelo nome (1 entrada)
+    if (ids.length === 0) {
+      if (!productName.trim()) return;
+      onAddMapping({ productId: '', productName: productName.trim(), plan });
+    } else {
+      // Cria um mapeamento pra cada ID; o nome (opcional) é compartilhado
+      for (const id of ids) {
+        onAddMapping({ productId: id, productName: productName.trim() || undefined, plan });
+      }
+    }
+    setProductIds('');
+    setProductName('');
+  };
 
   return (
     <Card variant="glass" className="p-5 space-y-4">
@@ -152,27 +169,6 @@ function PlatformCard({
             Copiar
           </Button>
         </div>
-      </div>
-
-      {/* Secret */}
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-violet-300 mb-1.5">
-          {platform === 'kiwify' ? 'Webhook Secret (assinatura HMAC)' : 'Token de verificação'}
-        </p>
-        <div className="flex gap-2">
-          <input
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            placeholder="Cole aqui o secret/token gerado pela plataforma"
-            className="flex-1 h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm font-mono"
-          />
-          <Button leftIcon={<Check size={14} />} onClick={() => onUpdate({ webhookSecret: secret })}>
-            Salvar
-          </Button>
-        </div>
-        <p className="text-[10px] text-text-subtle mt-1">
-          Opcional, mas recomendado pra evitar webhooks falsos.
-        </p>
       </div>
 
       {/* Mapeamentos */}
@@ -227,11 +223,12 @@ function PlatformCard({
         {/* Novo mapeamento */}
         <div className="rounded-xl bg-bg p-3 border border-border-subtle space-y-2">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <input
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-              placeholder="ID do produto"
-              className="h-9 px-3 rounded-lg bg-bg-elevated border border-border text-xs"
+            <textarea
+              value={productIds}
+              onChange={(e) => setProductIds(e.target.value)}
+              placeholder="ID do produto (vários, separados por vírgula)"
+              rows={2}
+              className="h-[60px] px-3 py-2 rounded-lg bg-bg-elevated border border-border text-xs resize-none"
             />
             <input
               value={productName}
@@ -248,18 +245,18 @@ function PlatformCard({
               <option value="pro">Plano PRO</option>
             </select>
           </div>
-          <Button
-            size="sm"
-            leftIcon={<Plus size={12} />}
-            onClick={() => {
-              if (!productId && !productName) return;
-              onAddMapping({ productId, productName, plan });
-              setProductId('');
-              setProductName('');
-            }}
-          >
-            Adicionar mapeamento
-          </Button>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[10px] text-text-subtle">
+              Cole vários IDs separados por vírgula — cria um mapeamento pra cada um.
+            </p>
+            <Button
+              size="sm"
+              leftIcon={<Plus size={12} />}
+              onClick={submitMapping}
+            >
+              Adicionar mapeamento
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

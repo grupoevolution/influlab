@@ -38,7 +38,7 @@ import {
   skinTones,
   vibes,
 } from '@/components/models/options';
-import { buildModelPrompt, useModels, type Gender, type Model } from '@/lib/models-store';
+import { buildModelBasePrompt, useModels, type Gender, type Model } from '@/lib/models-store';
 import { ModelCard } from '@/components/models/ModelCard';
 import { cn } from '@/lib/utils';
 
@@ -121,8 +121,9 @@ export default function ModelosPage() {
             <div>
               <h3 className="font-display font-bold text-sm mb-1">Como funciona</h3>
               <p className="text-xs text-text-muted leading-relaxed">
-                Você monta um personagem aqui (cabelo, pele, estilo etc.) e o app gera um trecho de prompt.
-                Quando você marca um modelo como ativo, todos os prompts copiados no <strong className="text-text-secondary">Lab de Imagens</strong> e <strong className="text-text-secondary">Lab de Vídeos</strong> já vêm com a descrição da pessoa colada no topo — mantém consistência total entre vídeos.
+                Monte o personagem aqui (físico, estilo, etc). O app gera <strong className="text-text-secondary">2 coisas</strong>:
+                {' '}<strong className="text-text-secondary">(1)</strong> um <em>prompt de foto-base 9:16</em> com blusa branca e fundo neutro — você gera a foto-mãe do personagem no Flow/Sora;
+                {' '}<strong className="text-text-secondary">(2)</strong> quando você marca o modelo como ativo, a descrição do personagem é automaticamente colada nos prompts do <strong className="text-text-secondary">Lab de Imagens</strong> e <strong className="text-text-secondary">Lab de Vídeos</strong>, mantendo consistência total entre as variações com produtos e cenários.
               </p>
             </div>
           </div>
@@ -203,7 +204,7 @@ function ModelEditor({
     setData((d) => ({ ...d, [key]: value }));
 
   const previewPrompt = useMemo(
-    () => buildModelPrompt({ ...(data as Model), id: 'preview', createdAt: '' }),
+    () => buildModelBasePrompt({ ...(data as Model), id: 'preview', createdAt: '' }),
     [data],
   );
 
@@ -512,8 +513,8 @@ function ModelEditor({
                   <User size={14} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-brand-cyan-300 font-bold">Preview</p>
-                  <h4 className="font-display font-bold text-sm leading-tight">Prompt do personagem</h4>
+                  <p className="text-[10px] uppercase tracking-widest text-brand-cyan-300 font-bold">Foto-base 9:16</p>
+                  <h4 className="font-display font-bold text-sm leading-tight">Prompt da foto-mãe</h4>
                 </div>
               </div>
 
@@ -534,11 +535,11 @@ function ModelEditor({
                 className="w-full h-9 rounded-xl bg-bg-elevated border border-border text-xs font-semibold text-text-secondary hover:text-text-primary hover:border-brand-cyan-400/40 transition inline-flex items-center justify-center gap-1.5"
               >
                 <Copy size={12} />
-                Copiar prompt do personagem
+                Copiar prompt da foto-base
               </button>
 
               <p className="text-[10px] text-text-subtle mt-3 leading-relaxed">
-                Esse trecho será automaticamente colado no início de qualquer prompt de imagem ou vídeo que você copiar no app.
+                Use no Flow/Sora pra gerar a <strong className="text-text-secondary">foto-mãe 9:16</strong> do personagem (blusa branca, fundo neutro). Depois, a partir dela, você cria todas as variações com produtos e cenários.
               </p>
             </Card>
           </aside>

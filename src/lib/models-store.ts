@@ -152,6 +152,11 @@ const HEIGHT_LABEL: Record<string, string> = {
   alta: 'estatura alta',
 };
 
+/**
+ * Descrição APENAS do personagem (físico, estilo, identidade).
+ * Não inclui cenário, enquadramento ou roupa específica — pra poder colar
+ * em qualquer prompt de cena/produto sem conflitar.
+ */
 export function buildModelPrompt(m: Model): string {
   if (!m) return '';
   const parts: string[] = [];
@@ -184,27 +189,40 @@ export function buildModelPrompt(m: Model): string {
     };
     parts.push(map[m.makeup] ?? m.makeup);
   }
-  if (m.baseOutfit) {
-    const map: Record<string, string> = {
-      casual: 'usando look casual',
-      social: 'usando look social',
-      esportivo: 'usando look esportivo',
-      'intimo-produto': 'usando roupa íntima/produto em destaque',
-    };
-    parts.push(map[m.baseOutfit] ?? m.baseOutfit);
-  }
 
   let text = parts.join(', ') + '.';
   if (m.extraDescription.trim()) {
     text += ' ' + m.extraDescription.trim();
     if (!text.endsWith('.')) text += '.';
   }
-  text += ' Sempre a mesma pessoa em todas as imagens e vídeos, consistência total de personagem.';
+  text += ' Sempre a mesma pessoa em todas as imagens e vídeos, consistência total de traços faciais e corpo.';
 
   return text;
 }
 
-/** Anexa o prompt do modelo (se houver) antes de um prompt base */
+/**
+ * Prompt da FOTO-BASE do personagem: imagem vertical 9:16 (TikTok),
+ * blusa branca básica, fundo neutro liso, estilo lookbook/book de modelo.
+ * É a "foto-mãe" — depois o aluno gera variações com produtos e cenários.
+ */
+export function buildModelBasePrompt(m: Model): string {
+  if (!m) return '';
+  const persona = buildModelPrompt(m);
+
+  const scene = [
+    'Foto retrato vertical 9:16 (formato TikTok / Reels), resolução alta.',
+    'Roupa: blusa básica branca de algodão, gola simples, sem estampas, sem logotipos.',
+    'Fundo: estúdio fotográfico, fundo liso (branco puro OU preto absoluto, sólido, sem textura, sem objetos, sem cenário).',
+    'Enquadramento: meio-corpo (do quadril pra cima), pessoa centralizada, olhando levemente para a câmera.',
+    'Iluminação: luz suave de estúdio, difusa, sem sombras duras, tom natural de pele.',
+    'Estilo: fotografia editorial profissional, estilo lookbook / book de modelo, hiper-realista, foco nítido no rosto.',
+    'IMPORTANTE: nenhum elemento adicional na cena — é a foto-base/referência do personagem para gerar variações depois.',
+  ].join(' ');
+
+  return `${persona}\n\n${scene}`;
+}
+
+/** Anexa a descrição do personagem (sem cenário) antes de um prompt de cena. */
 export function withModelPrompt(basePrompt: string, model: Model | null): string {
   if (!model) return basePrompt;
   const persona = buildModelPrompt(model);
