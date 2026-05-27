@@ -1,22 +1,23 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Calculator, Check, Percent, Save, Tag, TrendingUp, Users, Video } from 'lucide-react';
+import { Check, Info, Percent, Save, Target, TrendingUp, Users, Video } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { CircuitDecor } from '@/components/brand/CircuitDecor';
-import { calcularProjecao, useGoal, type GoalSettings } from '@/lib/goal-store';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { calcularProjecao, postsParaBaterMeta, useGoal, type GoalSettings } from '@/lib/goal-store';
+import { cn, formatCurrency, formatNumber } from '@/lib/utils';
 
-const RANGES = {
-  contas: { min: 1, max: 20, step: 1, label: 'Contas TikTok' },
-  postsPorDia: { min: 1, max: 20, step: 1, label: 'Posts por dia (por conta)' },
-  taxaConversao: { min: 0.1, max: 2, step: 0.1, label: 'Taxa de conversão' },
-  ticketMedio: { min: 20, max: 300, step: 5, label: 'Ticket médio' },
-  comissao: { min: 8, max: 15, step: 1, label: 'Comissão de afiliado' },
-};
+const META_MIN = 500;
+const META_MAX = 50000;
+const META_STEP = 250;
+const POSTS_MIN = 1;
+const POSTS_MAX = 20;
+const COMISSAO_MIN = 8;
+const COMISSAO_MAX = 15;
+const CONTAS_MAX = 10;
 
 const SCENARIO_STYLES = {
   Conservador: { color: 'text-amber-300', bg: 'from-amber-500/15 to-amber-400/5', border: 'border-amber-400/30' },
@@ -29,6 +30,7 @@ export default function CalculadoraPage() {
   const [local, setLocal] = useState<GoalSettings>(goal);
   const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [lastChanged, setLastChanged] = useState<'meta' | 'posts' | null>(null);
 
   useEffect(() => {
     setLocal(goal);
@@ -36,10 +38,40 @@ export default function CalculadoraPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const projection = useMemo(() => calcularProjecao(local), [local]);
+  const projection = useMemo(
+    () => calcularProjecao(local.contas, local.postsPorDia, local.comissao),
+    [local.contas, local.postsPorDia, local.comissao],
+  );
 
-  const update = <K extends keyof GoalSettings>(key: K, value: GoalSettings[K]) =>
-    setLocal((g) => ({ ...g, [key]: value }));
+  // Quando muda a META, recalcula posts/dia
+  const onMetaChange = (value: number) => {
+    const posts = postsParaBaterMeta(value, local.contas, local.comissao);
+    setLocal((g) => ({ ...g, metaMensal: value, postsPorDia: posts }));
+    setLastChanged('meta');
+  };
+
+  // Quando muda POSTS/DIA, atualiza meta para refletir o moderado dessa configuração
+  const onPostsChange = (value: number) => {
+    const proj = calcularProjecao(local.contas, value, local.comissao);
+    const novaMeta = Math.round(proj.cenarios[1].comissao / META_STEP) * META_STEP;
+    setLocal((g) => ({
+      ...g,
+      postsPorDia: value,
+      metaMensal: Math.min(META_MAX, Math.max(META_MIN, novaMeta)),
+    }));
+    setLastChanged('posts');
+  };
+
+  // Quando muda contas, recalcula posts baseado na meta atual
+  const onContasChange = (value: number) => {
+    const posts = postsParaBaterMeta(local.metaMensal, value, local.comissao);
+    setLocal((g) => ({ ...g, contas: value, postsPorDia: posts }));
+  };
+
+  const onComissaoChange = (value: number) => {
+    const posts = postsParaBaterMeta(local.metaMensal, local.contas, value);
+    setLocal((g) => ({ ...g, comissao: value, postsPorDia: posts }));
+  };
 
   const save = () => {
     setGoal(local);
@@ -49,92 +81,169 @@ export default function CalculadoraPage() {
 
   if (!hydrated) return null;
 
+  const metaPct = ((local.metaMensal - META_MIN) / (META_MAX - META_MIN)) * 100;
+  const postsPct = ((local.postsPorDia - POSTS_MIN) / (POSTS_MAX - POSTS_MIN)) * 100;
+  const comissaoPct = ((local.comissao - COMISSAO_MIN) / (COMISSAO_MAX - COMISSAO_MIN)) * 100;
+
   return (
     <>
       <PageHeader
         eyebrow="Simulador de escalabilidade"
         title={
           <>
-            Quanto você pode <span className="text-gradient-brand">faturar?</span>
+            Quanto você quer <span className="text-gradient-brand">faturar?</span>
           </>
         }
       />
 
       <section className="px-4 md:px-8 py-6">
         <div className="max-w-3xl mx-auto space-y-5">
-          {/* Inputs */}
-          <Card variant="glass" className="relative overflow-hidden">
+          {/* Contas (cards) */}
+          <Card variant="glass" className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-brand-violet-300">
+                <Users size={13} />
+                Quantas contas do TikTok você tem?
+              </label>
+              <span className="text-xl font-display font-bold text-text-primary">
+                {local.contas} {local.contas === 1 ? 'conta' : 'contas'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+              {Array.from({ length: CONTAS_MAX }, (_, i) => i + 1).map((n) => {
+                const active = local.contas === n;
+                return (
+                  <motion.button
+                    key={n}
+                    type="button"
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onContasChange(n)}
+                    className={cn(
+                      'relative h-12 rounded-xl border transition text-sm font-display font-bold',
+                      active
+                        ? 'bg-gradient-brand text-white border-transparent shadow-glow-brand'
+                        : 'bg-bg-elevated border-border text-text-muted hover:text-text-primary hover:border-brand-violet-400/40',
+                    )}
+                  >
+                    {n}
+                  </motion.button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-text-subtle mt-2">
+              Mais contas = mais alcance distribuído. Cada conta posta a quantidade definida abaixo.
+            </p>
+          </Card>
+
+          {/* Cards de meta + posts/dia */}
+          <Card variant="glass" className="relative overflow-hidden p-5 space-y-5">
             <CircuitDecor className="absolute inset-0 w-full h-full opacity-15 pointer-events-none" />
 
-            <div className="relative p-5 md:p-6 space-y-5">
-              <SliderField
-                icon={Users}
-                accent="brand-violet-300"
-                label={RANGES.contas.label}
-                value={local.contas}
-                onChange={(v) => update('contas', v)}
-                min={RANGES.contas.min}
-                max={RANGES.contas.max}
-                step={RANGES.contas.step}
-                format={(v) => `${v}`}
-                marks={[1, 5, 10, 15, 20]}
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-brand-cyan-300">
+                  <Target size={13} />
+                  Quanto você quer faturar por mês?
+                </label>
+                <span className="text-2xl font-display font-bold text-gradient-brand">
+                  {formatCurrency(local.metaMensal)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={META_MIN}
+                max={META_MAX}
+                step={META_STEP}
+                value={local.metaMensal}
+                onChange={(e) => onMetaChange(Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #22D3EE 0%, #7C3AED ${metaPct}%, rgb(var(--c-bg-elevated)) ${metaPct}%, rgb(var(--c-bg-elevated)) 100%)`,
+                }}
               />
+              <div className="flex justify-between text-[10px] text-text-muted mt-1">
+                <span>R$ 500</span>
+                <span>R$ 10k</span>
+                <span>R$ 25k</span>
+                <span>R$ 50k</span>
+              </div>
+            </div>
 
-              <SliderField
-                icon={Video}
-                accent="brand-cyan-300"
-                label={RANGES.postsPorDia.label}
+            <div className="relative pt-3 border-t border-border-subtle">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-brand-violet-300">
+                  <Video size={13} />
+                  Posts por dia (por conta)
+                </label>
+                <span className="text-2xl font-display font-bold">
+                  {local.postsPorDia}
+                  <span className="text-sm font-normal text-text-muted ml-1">/ dia</span>
+                </span>
+              </div>
+              <input
+                type="range"
+                min={POSTS_MIN}
+                max={POSTS_MAX}
+                step={1}
                 value={local.postsPorDia}
-                onChange={(v) => update('postsPorDia', v)}
-                min={RANGES.postsPorDia.min}
-                max={RANGES.postsPorDia.max}
-                step={RANGES.postsPorDia.step}
-                format={(v) => `${v}`}
-                marks={[1, 5, 10, 15, 20]}
+                onChange={(e) => onPostsChange(Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #7C3AED 0%, #22D3EE ${postsPct}%, rgb(var(--c-bg-elevated)) ${postsPct}%, rgb(var(--c-bg-elevated)) 100%)`,
+                }}
               />
+              <div className="flex justify-between text-[10px] text-text-muted mt-1">
+                <span>1</span>
+                <span>5</span>
+                <span>10</span>
+                <span>15</span>
+                <span>20</span>
+              </div>
+              <p className="text-[10px] text-brand-cyan-300/80 mt-2 leading-relaxed">
+                {lastChanged === 'meta'
+                  ? `Pra bater ${formatCurrency(local.metaMensal)}/mês, você precisa de ${local.postsPorDia} vídeo${local.postsPorDia > 1 ? 's' : ''}/dia em cada uma das ${local.contas} conta${local.contas > 1 ? 's' : ''}.`
+                  : `Total: ${local.contas * local.postsPorDia} vídeos/dia · ${local.contas * local.postsPorDia * 30} no mês.`}
+              </p>
+            </div>
 
-              <SliderField
-                icon={Percent}
-                accent="amber-300"
-                label={RANGES.taxaConversao.label}
-                value={local.taxaConversao}
-                onChange={(v) => update('taxaConversao', v)}
-                min={RANGES.taxaConversao.min}
-                max={RANGES.taxaConversao.max}
-                step={RANGES.taxaConversao.step}
-                format={(v) => `${v.toFixed(1)}%`}
-                marks={[0.1, 0.5, 1, 1.5, 2]}
-              />
-
-              <SliderField
-                icon={Tag}
-                accent="emerald-300"
-                label={RANGES.ticketMedio.label}
-                value={local.ticketMedio}
-                onChange={(v) => update('ticketMedio', v)}
-                min={RANGES.ticketMedio.min}
-                max={RANGES.ticketMedio.max}
-                step={RANGES.ticketMedio.step}
-                format={(v) => `R$ ${v}`}
-                marks={[20, 80, 150, 220, 300]}
-              />
-
-              <SliderField
-                icon={Percent}
-                accent="pink-300"
-                label={RANGES.comissao.label}
+            <div className="relative pt-3 border-t border-border-subtle">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <label className="text-xs font-semibold inline-flex items-center gap-1.5 text-amber-300">
+                  <Percent size={13} />
+                  Comissão de afiliado
+                </label>
+                <span className="text-2xl font-display font-bold">{local.comissao}%</span>
+              </div>
+              <input
+                type="range"
+                min={COMISSAO_MIN}
+                max={COMISSAO_MAX}
+                step={1}
                 value={local.comissao}
-                onChange={(v) => update('comissao', v)}
-                min={RANGES.comissao.min}
-                max={RANGES.comissao.max}
-                step={RANGES.comissao.step}
-                format={(v) => `${v}%`}
-                marks={[8, 10, 12, 14, 15]}
+                onChange={(e) => onComissaoChange(Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #F59E0B 0%, #7C3AED ${comissaoPct}%, rgb(var(--c-bg-elevated)) ${comissaoPct}%, rgb(var(--c-bg-elevated)) 100%)`,
+                }}
               />
+              <div className="flex justify-between text-[10px] text-text-muted mt-1">
+                <span>8%</span>
+                <span>10%</span>
+                <span>12%</span>
+                <span>14%</span>
+                <span>15%</span>
+              </div>
+              <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/10 border border-amber-400/30 p-2">
+                <Info size={12} className="text-amber-300 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-amber-200 leading-relaxed">
+                  <strong>Dica:</strong> dê preferência a produtos com pelo menos <strong>10% de comissão</strong>. Comissões mais altas escalam muito mais rápido.
+                </p>
+              </div>
             </div>
           </Card>
 
-          {/* Header de projeção */}
+          {/* Audiência base */}
           <motion.div
             key={projection.totalAudiencia}
             initial={{ opacity: 0.6, y: 8 }}
@@ -161,7 +270,7 @@ export default function CalculadoraPage() {
           {/* Cenários */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {projection.cenarios.map((c) => {
-              const style = SCENARIO_STYLES[c.label as keyof typeof SCENARIO_STYLES];
+              const style = SCENARIO_STYLES[c.label];
               return (
                 <Card key={c.label} variant="glass" className="relative overflow-hidden">
                   <div className={`absolute inset-0 bg-gradient-to-br opacity-50 ${style.bg}`} />
@@ -174,7 +283,6 @@ export default function CalculadoraPage() {
                     </p>
                     <div className="text-[11px] text-text-muted space-y-0.5">
                       <p>{c.vendas.toLocaleString('pt-BR')} vendas/mês</p>
-                      <p>Faturamento: {formatCurrency(c.faturamento)}</p>
                     </div>
                   </div>
                 </Card>
@@ -188,17 +296,14 @@ export default function CalculadoraPage() {
               <TrendingUp size={18} className="text-emerald-300 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                  Com <strong className="text-text-primary">{local.contas} conta(s)</strong> postando{' '}
-                  <strong className="text-text-primary">{local.postsPorDia} vídeo(s)/dia</strong>, sua
-                  comissão moderada projetada é{' '}
+                  Com <strong className="text-text-primary">{local.contas} conta{local.contas > 1 ? 's' : ''}</strong> postando{' '}
+                  <strong className="text-text-primary">{local.postsPorDia} vídeo{local.postsPorDia > 1 ? 's' : ''}/dia</strong>{' '}
+                  com produtos de <strong className="text-text-primary">{local.comissao}% de comissão</strong>, sua projeção
+                  moderada é{' '}
                   <strong className="text-emerald-300">
                     {formatCurrency(projection.cenarios[1].comissao)}/mês
                   </strong>
                   .
-                </p>
-                <p className="text-[11px] text-text-muted mt-1.5 leading-relaxed">
-                  Mais consistência aumenta o alcance base por post (algoritmo TikTok).
-                  Dobrar volume costuma triplicar a audiência base, não dobrar.
                 </p>
               </div>
             </div>
@@ -214,64 +319,10 @@ export default function CalculadoraPage() {
           </Button>
 
           <p className="text-[10px] text-text-subtle text-center leading-relaxed">
-            Audiência base = 1.000 + (posts/dia × 100) views por post. Cenários aplicam multiplicadores de conversão e ticket sobre essa base.
+            Modelo baseado em criadores InfluLab: 0.5% de conversão média e ticket médio de R$ 80. Audiência base = 1000 + (posts/dia × 100) views/post.
           </p>
         </div>
       </section>
     </>
-  );
-}
-
-function SliderField({
-  icon: Icon,
-  accent,
-  label,
-  value,
-  onChange,
-  min,
-  max,
-  step,
-  format,
-  marks,
-}: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  accent: string;
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  min: number;
-  max: number;
-  step: number;
-  format: (v: number) => string;
-  marks: number[];
-}) {
-  const pct = ((value - min) / (max - min)) * 100;
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className={`text-xs font-semibold inline-flex items-center gap-1.5 text-${accent}`}>
-          <Icon size={13} />
-          {label}
-        </label>
-        <span className="text-xl font-display font-bold text-text-primary">{format(value)}</span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer"
-        style={{
-          background: `linear-gradient(to right, #22D3EE 0%, #7C3AED ${pct}%, rgb(var(--c-bg-elevated)) ${pct}%, rgb(var(--c-bg-elevated)) 100%)`,
-        }}
-      />
-      <div className="flex justify-between text-[10px] text-text-muted mt-1">
-        {marks.map((m) => (
-          <span key={m}>{format(m)}</span>
-        ))}
-      </div>
-    </div>
   );
 }

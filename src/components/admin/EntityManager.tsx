@@ -254,22 +254,13 @@ function EntityForm<T extends { id: string } & Record<string, unknown>>({
   return (
     <Modal open onClose={onClose} maxWidth="xl">
       <form onSubmit={submit} className="p-5 md:p-7">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
-              {initial ? 'Editando' : 'Novo registro'}
-            </p>
-            <h3 className="text-xl font-display font-bold leading-tight">
-              {initial ? 'Atualizar item' : 'Criar item'}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5"
-          >
-            <X size={16} />
-          </button>
+        <div className="mb-5 pr-10">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 mb-1">
+            {initial ? 'Editando' : 'Novo registro'}
+          </p>
+          <h3 className="text-xl font-display font-bold leading-tight">
+            {initial ? 'Atualizar item' : 'Criar item'}
+          </h3>
         </div>
 
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">

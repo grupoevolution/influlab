@@ -22,11 +22,13 @@ import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { todayISO, useCalendar } from '@/lib/calendar-store';
+import { TranscriptionModal } from './TranscriptionModal';
 import type { AdProduct } from '@/lib/db/types';
 
 export function ProductModal({ product, open, onClose }: { product: AdProduct | null; open: boolean; onClose: () => void }) {
   const { add } = useCalendar();
   const [added, setAdded] = useState(false);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
 
   if (!product) return null;
 
@@ -110,34 +112,6 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
             </div>
           </div>
 
-          {/* Transcrição */}
-          {product.videoTranscription && (
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-cyan-300 inline-flex items-center gap-1.5">
-                  <FileText size={11} />
-                  Transcrição do vídeo
-                </p>
-                <CopyButton
-                  text={product.videoTranscription}
-                  label="Copiar"
-                  size="sm"
-                  variant="ghost"
-                  injectModel={false}
-                  className="h-7 text-[11px] px-2"
-                />
-              </div>
-              <div className="rounded-xl bg-bg-elevated border border-border p-3 max-h-40 overflow-y-auto">
-                <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-                  {product.videoTranscription}
-                </p>
-              </div>
-              <p className="text-[10px] text-text-subtle mt-1.5">
-                Cole no agente GPT pra gerar copy personalizado.
-              </p>
-            </div>
-          )}
-
           {/* Ações principais */}
           <div className="space-y-2.5">
             {product.videoExampleUrl && (
@@ -184,6 +158,18 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
               )}
             </div>
 
+            {product.videoTranscription && (
+              <Button
+                variant="secondary"
+                size="md"
+                className="w-full"
+                leftIcon={<FileText size={14} />}
+                onClick={() => setTranscriptOpen(true)}
+              >
+                Ver transcrição do vídeo
+              </Button>
+            )}
+
             <Button
               variant={added ? 'outline' : 'ghost'}
               size="md"
@@ -218,6 +204,13 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
           </div>
         </div>
       </div>
+
+      <TranscriptionModal
+        open={transcriptOpen}
+        onClose={() => setTranscriptOpen(false)}
+        productName={product.name}
+        transcription={product.videoTranscription ?? ''}
+      />
     </Modal>
   );
 }

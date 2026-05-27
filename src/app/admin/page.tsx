@@ -21,41 +21,64 @@ import { StatCard } from '@/components/admin/StatCard';
 import { AccessChart } from '@/components/admin/AccessChart';
 import { getCurrentSession } from '@/lib/auth/session';
 import { getDB, isPersistenceAvailable } from '@/lib/db';
-import type { Schema } from '@/lib/db/types';
+import type { AccessLogEntry, Schema } from '@/lib/db/types';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const EMPTY: Schema = {
-  products: [], videoPrompts: [], imagePrompts: [], virals: [],
-  creators: [], whitelist: [], announcements: [], accessLog: [], broadcasts: [],
-  platformMappings: [], platformConfig: {},
+  products: [],
+  videoPrompts: [],
+  imagePrompts: [],
+  virals: [],
+  creators: [],
+  whitelist: [],
+  announcements: [],
+  accessLog: [],
+  broadcasts: [],
+  platformMappings: [],
+  platformConfig: {},
 };
 
+async function loadDashboardData(): Promise<{ db: Schema; error: string | null; persistOk: boolean }> {
+  try {
+    const db = await getDB();
+    return { db, error: null, persistOk: isPersistenceAvailable() };
+  } catch (err) {
+    return {
+      db: EMPTY,
+      error: (err as Error)?.message ?? 'Erro ao carregar dados.',
+      persistOk: false,
+    };
+  }
+}
+
 export default async function AdminDashboardPage() {
-  const session = await getCurrentSession();
+  let session;
+  try {
+    session = await getCurrentSession();
+  } catch {
+    session = null;
+  }
   const isAdmin = session?.role === 'admin';
 
-  let db: Schema = EMPTY;
-  let dbError: string | null = null;
-  try {
-    db = await getDB();
-  } catch (err) {
-    dbError = (err as Error)?.message ?? 'Erro ao carregar dados.';
-  }
+  const { db, error: dbError, persistOk } = await loadDashboardData();
 
   const todayISO = new Date().toISOString().slice(0, 10);
-  const accessesToday = db.accessLog.filter((l) => l.at.startsWith(todayISO)).length;
-  const loginsToday = db.accessLog.filter((l) => l.at.startsWith(todayISO) && l.type === 'login').length;
-  const blockedToday = db.accessLog.filter((l) => l.at.startsWith(todayISO) && l.type === 'blocked').length;
+  const accessLog: AccessLogEntry[] = Array.isArray(db.accessLog) ? db.accessLog : [];
+
+  const accessesToday = accessLog.filter((l) => l.at?.startsWith(todayISO)).length;
+  const loginsToday = accessLog.filter((l) => l.at?.startsWith(todayISO) && l.type === 'login').length;
+  const blockedToday = accessLog.filter((l) => l.at?.startsWith(todayISO) && l.type === 'blocked').length;
 
   const stats = [
-    { icon: Crown, label: 'Produtos campeões', value: db.products.length, hint: 'Ativos no app', href: '/admin/produtos', accent: 'amber' as const },
-    { icon: Clapperboard, label: 'Prompts de vídeo', value: db.videoPrompts.length, hint: 'Banco completo', href: '/admin/prompts-video', accent: 'violet' as const },
-    { icon: ImageIcon, label: 'Prompts de imagem', value: db.imagePrompts.length, hint: 'Disponíveis', href: '/admin/prompts-imagem', accent: 'cyan' as const },
-    { icon: Flame, label: 'Vídeos virais', value: db.virals.length, hint: 'Modelos catalogados', href: '/admin/virais', accent: 'pink' as const },
-    { icon: Trophy, label: 'Top criadores', value: db.creators.length, hint: 'No ranking', href: '/admin/criadores', accent: 'emerald' as const },
+    { icon: Crown, label: 'Produtos campeões', value: db.products?.length ?? 0, hint: 'Ativos no app', href: '/admin/produtos', accent: 'amber' as const },
+    { icon: Clapperboard, label: 'Prompts de vídeo', value: db.videoPrompts?.length ?? 0, hint: 'Banco completo', href: '/admin/prompts-video', accent: 'violet' as const },
+    { icon: ImageIcon, label: 'Prompts de imagem', value: db.imagePrompts?.length ?? 0, hint: 'Disponíveis', href: '/admin/prompts-imagem', accent: 'cyan' as const },
+    { icon: Flame, label: 'Vídeos virais', value: db.virals?.length ?? 0, hint: 'Modelos catalogados', href: '/admin/virais', accent: 'pink' as const },
+    { icon: Trophy, label: 'Top criadores', value: db.creators?.length ?? 0, hint: 'No ranking', href: '/admin/criadores', accent: 'emerald' as const },
     ...(isAdmin
-      ? [{ icon: UserCheck, label: 'Acessos liberados', value: db.whitelist.length, hint: 'Compradores ativos', href: '/admin/acessos', accent: 'cyan' as const }]
+      ? [{ icon: UserCheck, label: 'Acessos liberados', value: db.whitelist?.length ?? 0, hint: 'Compradores ativos', href: '/admin/acessos', accent: 'cyan' as const }]
       : []),
   ];
 
@@ -72,8 +95,7 @@ export default async function AdminDashboardPage() {
       : []),
   ];
 
-  const recentLogins = db.accessLog.slice(0, 8);
-  const persistOk = isPersistenceAvailable();
+  const recentLogins = accessLog.slice(0, 8);
 
   return (
     <>
@@ -99,7 +121,7 @@ export default async function AdminDashboardPage() {
                 <p className="text-sm font-semibold text-amber-200">Persistência em memória</p>
                 <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
                   {dbError
-                    ? `Houve um erro ao carregar o banco: ${dbError}`
+                    ? `Erro ao carregar o banco: ${dbError}`
                     : 'O volume /app/data não está montado no EasyPanel. Os dados serão perdidos a cada deploy.'}
                   <br />
                   <strong>Solução:</strong> no EasyPanel → Mounts → adicione um volume em <code className="text-brand-cyan-300">/app/data</code> e refaça o deploy.
@@ -141,7 +163,7 @@ export default async function AdminDashboardPage() {
                   </div>
                 </div>
               </div>
-              <AccessChart logs={db.accessLog} />
+              <AccessChart logs={accessLog} />
             </Card>
           )}
 

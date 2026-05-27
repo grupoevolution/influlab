@@ -68,12 +68,11 @@ export default function AgendaPage() {
 
   const weekProgressPct = Math.min(100, weeklyGoal === 0 ? 0 : (postedThisWeek / weeklyGoal) * 100);
 
-  // Faturamento do mês corrente — usa cenário moderado da calculadora
+  // Faturamento do mês corrente — usa meta declarada pelo aluno na calculadora
   const monthPrefix = today.slice(0, 7);
   const postedThisMonth = items.filter((i) => i.posted && i.scheduledDate.startsWith(monthPrefix)).length;
-  const projection = calcularProjecao(goal);
-  const monthGoal = projection.cenarios[1].comissao; // moderado
-  // Estimativa de faturamento baseada na proporção de posts realizados vs. esperados
+  const projection = calcularProjecao(goal.contas, goal.postsPorDia, goal.comissao);
+  const monthGoal = goal.metaMensal || projection.cenarios[1].comissao;
   const expectedPostsMonth = projection.postsMes;
   const ratio = expectedPostsMonth > 0 ? Math.min(1, postedThisMonth / expectedPostsMonth) : 0;
   const monthRevenue = monthGoal * ratio;
