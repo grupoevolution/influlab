@@ -16,7 +16,12 @@
       "Bash(grep -L \"force-dynamic\\\\|dynamic = \" /Users/iagobastos/Downloads/influlab/src/app/api/admin/*/route.ts /Users/iagobastos/Downloads/influlab/src/app/api/admin/whitelist/import/route.ts)",
       "Bash(npm run:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(ls /Users/iagobastos/Downloads/influlab/.env*)",
+      "Bash(/Users/iagobastos/Downloads/influlab/.env.local:*)",
+      "Bash(curl -s -b /tmp/cookies.txt http://localhost:3000/admin -L)",
+      "Bash(curl -s -c /tmp/prod-cookies.txt -X POST https://aplicativo-lab.ommpuj.easypanel.host/api/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"admin@influlab.io\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"InfluLab@Admin2026\"\"\"\"}')",
+      "Bash(curl -s -b /tmp/prod-cookies.txt -L https://aplicativo-lab.ommpuj.easypanel.host/admin)"
     ]
   }
 }
