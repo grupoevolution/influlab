@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(AUTH_SECRET=teste123teste123teste123teste123 npm run build)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(ls /Users/iagobastos/Downloads/influlab/src/app/api/admin/products/[id]/)",
+      "Bash(git ls-tree:*)",
+      "Bash(git show:*)"
     ]
   }
 }

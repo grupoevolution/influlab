@@ -74,8 +74,13 @@ export function EntityManager<T extends { id: string } & Record<string, unknown>
 
   const remove = async (id: string) => {
     if (!confirm('Remover este item? Esta ação não pode ser desfeita.')) return;
-    const res = await fetch(`${endpoint}/${id}`, { method: 'DELETE' });
-    if (res.ok) load();
+    const res = await fetch(`${endpoint}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (res.ok) {
+      load();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      alert(`Erro ao remover: ${j.error ?? res.status}`);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -238,14 +243,21 @@ function EntityForm<T extends { id: string } & Record<string, unknown>>({
     e.preventDefault();
     setSaving(true);
     try {
-      const url = initial ? `${endpoint}/${initial.id}` : endpoint;
+      const url = initial ? `${endpoint}?id=${encodeURIComponent(initial.id)}` : endpoint;
       const method = initial ? 'PATCH' : 'POST';
       const res = await fetch(url, {
         method,
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(values),
       });
-      if (res.ok) onSaved();
+      if (res.ok) {
+        onSaved();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        alert(`Erro ao salvar: ${j.error ?? res.status}`);
+      }
+    } catch (err) {
+      alert(`Erro de conexão: ${(err as Error).message}`);
     } finally {
       setSaving(false);
     }

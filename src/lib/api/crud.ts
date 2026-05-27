@@ -47,6 +47,56 @@ export function makeCreateHandler<K extends SchemaArrayKey>(
   };
 }
 
+/** PATCH na rota base — id vem do body ou ?id= */
+export function makePatchHandler<K extends SchemaArrayKey>(key: K, opts: CrudOptions = {}) {
+  return async function PATCH(req: Request) {
+    const ac = await checkAccess(opts);
+    if (!ac.ok) return NextResponse.json({ error: ac.error }, { status: ac.status });
+
+    const url = new URL(req.url);
+    const idFromQuery = url.searchParams.get('id');
+    const body = (await req.json().catch(() => ({}))) as Partial<ArrayItem<K>> & { id?: string };
+
+    const id = idFromQuery ?? body.id;
+    if (!id) {
+      return NextResponse.json({ error: 'id obrigatório (use ?id=... ou no body)' }, { status: 400 });
+    }
+
+    const { id: _omit, ...patch } = body as { id?: string } & Partial<ArrayItem<K>>;
+    const updated = await updateOne(key, id, patch as Partial<ArrayItem<K>>);
+    if (!updated) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 });
+    return NextResponse.json({ data: updated });
+  };
+}
+
+/** DELETE na rota base — id vem do body ou ?id= */
+export function makeRemoveHandler<K extends SchemaArrayKey>(key: K, opts: CrudOptions = {}) {
+  return async function DELETE(req: Request) {
+    const ac = await checkAccess(opts);
+    if (!ac.ok) return NextResponse.json({ error: ac.error }, { status: ac.status });
+
+    const url = new URL(req.url);
+    let id = url.searchParams.get('id');
+    if (!id) {
+      try {
+        const body = (await req.json()) as { id?: string };
+        id = body?.id ?? null;
+      } catch {
+        id = null;
+      }
+    }
+    if (!id) {
+      return NextResponse.json({ error: 'id obrigatório (use ?id=...)' }, { status: 400 });
+    }
+
+    const ok = await deleteOne(key, id);
+    if (!ok) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  };
+}
+
+// ===== Compatibilidade legada (caso ainda existam rotas [id]) =====
+
 export function makeUpdateHandler<K extends SchemaArrayKey>(key: K, opts: CrudOptions = {}) {
   return async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
     const ac = await checkAccess(opts);
