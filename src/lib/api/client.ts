@@ -5,6 +5,7 @@ import type {
   AdProduct,
   AnnouncementDB,
   CreatorDB,
+  HeroGalleryItem,
   ImagePromptDB,
   NotificationBroadcast,
   ViralVideoDB,
@@ -48,5 +49,6 @@ export const useVideoPrompts = () => useResource<VideoPromptDB[]>('/api/public/v
 export const useImagePrompts = () => useResource<ImagePromptDB[]>('/api/public/image-prompts', []);
 export const useVirals = () => useResource<ViralVideoDB[]>('/api/public/virals', []);
 export const useCreators = () => useResource<CreatorDB[]>('/api/public/creators', []);
+export const useHeroGallery = () => useResource<HeroGalleryItem[]>('/api/public/hero-gallery', []);
 export const useAnnouncement = () => useResource<AnnouncementDB | null>('/api/public/announcement', null);
 export const useLatestBroadcast = () => useResource<NotificationBroadcast | null>('/api/public/broadcast', null);

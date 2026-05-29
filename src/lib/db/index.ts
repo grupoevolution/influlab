@@ -12,6 +12,7 @@ const EMPTY_SCHEMA: Schema = {
   imagePrompts: [],
   virals: [],
   creators: [],
+  heroGallery: [],
   whitelist: [],
   announcements: [],
   accessLog: [],

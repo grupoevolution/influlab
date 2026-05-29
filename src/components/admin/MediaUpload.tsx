@@ -13,6 +13,8 @@ interface MediaUploadProps {
   label?: string;
   hint?: string;
   className?: string;
+  /** Limite extra de tamanho em MB validado no client. Servidor tem o próprio limite (60MB vídeo, 12MB imagem). */
+  maxSizeMB?: number;
 }
 
 export function MediaUpload({
@@ -22,6 +24,7 @@ export function MediaUpload({
   label,
   hint,
   className,
+  maxSizeMB,
 }: MediaUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -35,8 +38,13 @@ export function MediaUpload({
       : 'image/*,video/mp4,video/webm';
 
   const upload = async (file: File) => {
-    setUploading(true);
     setError(null);
+    if (maxSizeMB && file.size > maxSizeMB * 1024 * 1024) {
+      setError(`Arquivo maior que ${maxSizeMB}MB`);
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+    setUploading(true);
     try {
       const form = new FormData();
       form.append('file', file);

@@ -64,6 +64,18 @@ export type ViralVideoDB = {
   createdAt: string;
 };
 
+/**
+ * Item da galeria do hero (carrossel de vídeos atrás do "Olá, criador").
+ * Limite recomendado: 6-10 itens, vídeos curtos de 2-3s em 9:16.
+ */
+export type HeroGalleryItem = {
+  id: string;
+  videoUrl: string;
+  order: number;       // posição no carrossel (1, 2, 3...)
+  title?: string;      // opcional, só pra o admin se organizar
+  createdAt: string;
+};
+
 export type CreatorDB = {
   id: string;
   name: string;
@@ -147,6 +159,7 @@ export type Schema = {
   imagePrompts: ImagePromptDB[];
   virals: ViralVideoDB[];
   creators: CreatorDB[];
+  heroGallery: HeroGalleryItem[];
   whitelist: WhitelistEntry[];
   announcements: AnnouncementDB[];
   accessLog: AccessLogEntry[];

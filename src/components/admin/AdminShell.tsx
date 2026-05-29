@@ -7,6 +7,7 @@ import {
   Clapperboard,
   Crown,
   ExternalLink,
+  Film,
   Flame,
   LayoutDashboard,
   Image as ImageIcon,
@@ -41,6 +42,7 @@ const contentNav: NavItem[] = [
   { href: '/admin/prompts-imagem', label: 'Prompts de imagem', icon: ImageIcon },
   { href: '/admin/virais', label: 'Vídeos virais', icon: Flame },
   { href: '/admin/criadores', label: 'Top criadores', icon: Trophy },
+  { href: '/admin/galeria', label: 'Galeria do hero', icon: Film },
 ];
 
 const systemNav: NavItem[] = [
