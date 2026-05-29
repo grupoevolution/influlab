@@ -128,6 +128,10 @@ type ArrItem<K extends SchemaArrayKey> = Schema[K] extends ReadonlyArray<infer U
 
 export async function listAll<K extends SchemaArrayKey>(key: K): Promise<Schema[K]> {
   const db = await getDB();
+  // Blindagem contra DBs legados que ainda não tinham essa chave salva em disco.
+  if (db[key] == null) {
+    (db as unknown as Record<string, unknown>)[key as string] = [];
+  }
   return db[key];
 }
 
@@ -149,6 +153,10 @@ export async function insertOne<K extends SchemaArrayKey>(
   item: ArrItem<K>,
 ): Promise<ArrItem<K>> {
   await mutateDB((db) => {
+    // Blindagem contra DBs legados que ainda não tinham essa chave salva em disco.
+    if (db[key] == null) {
+      (db as unknown as Record<string, unknown>)[key as string] = [];
+    }
     const arr = db[key] as unknown as ArrItem<K>[];
     arr.unshift(item);
   });
