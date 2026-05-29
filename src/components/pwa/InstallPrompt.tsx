@@ -165,21 +165,28 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
     };
   }, [open]);
 
+  // Cleanup defensivo no unmount, garantindo que o body.overflow nunca fica preso.
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, pointerEvents: 'auto' }}
+            exit={{ opacity: 0, pointerEvents: 'none' }}
             onClick={onClose}
             className="fixed inset-0 z-50 bg-bg/80 backdrop-blur-md"
           />
           <motion.div
             initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
+            animate={{ y: 0, pointerEvents: 'auto' }}
+            exit={{ y: '100%', pointerEvents: 'none' }}
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             className="fixed bottom-0 inset-x-0 z-50 max-h-[90vh] overflow-y-auto"
           >

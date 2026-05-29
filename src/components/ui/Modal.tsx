@@ -35,14 +35,22 @@ export function Modal({ open, onClose, children, className, maxWidth = 'lg' }: M
     };
   }, [open, onClose]);
 
+  // Garantia adicional: se o Modal for desmontado abruptamente
+  // (navegação, hot reload, deploy), restaura o scroll do body.
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <AnimatePresence>
       {open && (
         <motion.div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          animate={{ opacity: 1, pointerEvents: 'auto' }}
+          exit={{ opacity: 0, pointerEvents: 'none' }}
         >
           {/* backdrop */}
           <motion.div

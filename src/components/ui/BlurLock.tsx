@@ -49,8 +49,8 @@ export function BlurLock({
         {open && (
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, pointerEvents: 'auto' }}
+            exit={{ opacity: 0, pointerEvents: 'none' }}
             className="fixed inset-0 z-[55] flex items-center justify-center p-4"
           >
             <div

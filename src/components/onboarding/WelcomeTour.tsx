@@ -117,8 +117,8 @@ export function WelcomeTour() {
       {view && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          animate={{ opacity: 1, pointerEvents: 'auto' }}
+          exit={{ opacity: 0, pointerEvents: 'none' }}
           className="fixed inset-0 z-[60] flex items-center justify-center p-4"
         >
           <div className="absolute inset-0 bg-bg/85 backdrop-blur-md" onClick={close} />
