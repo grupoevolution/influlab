@@ -75,12 +75,12 @@ export function AdminShell({
 
   return (
     <div className="min-h-screen">
-      {/* Sidebar desktop */}
-      <aside className="hidden lg:flex w-64 fixed inset-y-0 left-0 flex-col bg-bg-surface/90 backdrop-blur-xl border-r border-border-subtle z-40">
+      {/* Sidebar desktop — aparece a partir de 768px (tolerância pra zoom alto e tablet) */}
+      <aside className="hidden md:flex w-64 fixed inset-y-0 left-0 flex-col bg-bg-surface/90 backdrop-blur-xl border-r border-border-subtle z-40">
         <SidebarContent role={role} email={email} pathname={pathname} onLogout={logout} />
       </aside>
 
-      {/* Sidebar mobile (drawer) */}
+      {/* Sidebar mobile (drawer) — só em telas estreitas */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -89,14 +89,14 @@ export function AdminShell({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 z-40 lg:hidden bg-bg/70 backdrop-blur-sm"
+              className="fixed inset-0 z-40 md:hidden bg-bg/70 backdrop-blur-sm"
             />
             <motion.aside
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 lg:hidden flex flex-col bg-bg-surface/95 backdrop-blur-xl border-r border-border-subtle"
+              className="fixed inset-y-0 left-0 z-50 w-72 md:hidden flex flex-col bg-bg-surface/95 backdrop-blur-xl border-r border-border-subtle"
             >
               <SidebarContent
                 role={role}
@@ -111,13 +111,13 @@ export function AdminShell({
       </AnimatePresence>
 
       {/* Main content */}
-      <div className="lg:pl-64 min-h-screen flex flex-col">
+      <div className="md:pl-64 min-h-screen flex flex-col">
         {/* Topbar */}
         <header className="sticky top-0 z-30 h-16 border-b border-border-subtle bg-bg/80 backdrop-blur-xl">
           <div className="h-full px-4 md:px-8 flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
+              className="md:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
               aria-label="Abrir menu"
             >
               <Menu size={20} />

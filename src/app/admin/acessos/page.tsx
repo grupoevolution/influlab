@@ -1,6 +1,6 @@
 'use client';
 
-import { Crown, FileSpreadsheet, Mail, Plus, Search, Trash2, Upload, UserCheck } from 'lucide-react';
+import { Check, Crown, Edit3, FileSpreadsheet, Mail, Plus, Search, Trash2, Upload, UserCheck, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
@@ -63,6 +63,27 @@ export default function AdminAcessosPage() {
       body: JSON.stringify({ email: em }),
     });
     load();
+  };
+
+  const renameEmail = async (oldEmail: string, newEmail: string) => {
+    const ne = newEmail.trim().toLowerCase();
+    if (!ne || !ne.includes('@')) {
+      alert('Email inválido');
+      return false;
+    }
+    if (ne === oldEmail) return true; // nada a fazer
+    const r = await fetch('/api/admin/whitelist', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: oldEmail, newEmail: ne }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(`Erro ao alterar: ${j.error ?? r.status}`);
+      return false;
+    }
+    load();
+    return true;
   };
 
   const filtered = useMemo(
@@ -175,43 +196,145 @@ export default function AdminAcessosPage() {
             <div className="p-6 text-sm text-text-muted text-center">Nenhum email encontrado.</div>
           )}
           {filtered.map((w) => (
-            <div key={w.email} className="flex items-center gap-3 p-3">
-              <div className={cn(
-                'h-8 w-8 rounded-lg flex items-center justify-center shrink-0',
-                w.plan === 'pro'
-                  ? 'bg-amber-500/15 text-amber-300'
-                  : 'bg-brand-cyan-500/15 text-brand-cyan-300',
-              )}>
-                {w.plan === 'pro' ? <Crown size={14} /> : <UserCheck size={14} />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{w.email}</p>
-                <p className="text-[10px] text-text-muted truncate">
-                  {new Date(w.addedAt).toLocaleString('pt-BR')}
-                  {w.source !== 'manual' && ` · via ${w.source}`}
-                </p>
-              </div>
-              <select
-                value={w.plan}
-                onChange={(e) => updatePlan(w.email, e.target.value as Plan)}
-                className="h-8 px-2 rounded-lg bg-bg-elevated border border-border text-xs"
-              >
-                <option value="basic">Básico</option>
-                <option value="pro">PRO</option>
-              </select>
-              <button
-                onClick={() => remove(w.email)}
-                className="p-2 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+            <WhitelistRow
+              key={w.email}
+              entry={w}
+              onPlanChange={(p) => updatePlan(w.email, p)}
+              onRename={(ne) => renameEmail(w.email, ne)}
+              onRemove={() => remove(w.email)}
+            />
           ))}
         </Card>
       </section>
 
       <ImportCsvModal open={importOpen} onClose={() => setImportOpen(false)} onDone={load} />
     </>
+  );
+}
+
+function WhitelistRow({
+  entry,
+  onPlanChange,
+  onRename,
+  onRemove,
+}: {
+  entry: WhitelistEntry;
+  onPlanChange: (plan: Plan) => void;
+  onRename: (newEmail: string) => Promise<boolean>;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry.email);
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    setDraft(entry.email);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setDraft(entry.email);
+    setEditing(false);
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      const ok = await onRename(draft);
+      if (ok) setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-3">
+      <div
+        className={cn(
+          'h-8 w-8 rounded-lg flex items-center justify-center shrink-0',
+          entry.plan === 'pro'
+            ? 'bg-amber-500/15 text-amber-300'
+            : 'bg-brand-cyan-500/15 text-brand-cyan-300',
+        )}
+      >
+        {entry.plan === 'pro' ? <Crown size={14} /> : <UserCheck size={14} />}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <input
+            type="email"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveEdit();
+              if (e.key === 'Escape') cancelEdit();
+            }}
+            autoFocus
+            disabled={saving}
+            className="w-full h-8 px-2 rounded-lg bg-bg-elevated border border-brand-violet-400/40 text-sm focus:border-brand-violet-400 outline-none"
+          />
+        ) : (
+          <>
+            <p className="text-sm font-semibold truncate">{entry.email}</p>
+            <p className="text-[10px] text-text-muted truncate">
+              {new Date(entry.addedAt).toLocaleString('pt-BR')}
+              {entry.source !== 'manual' && ` · via ${entry.source}`}
+            </p>
+          </>
+        )}
+      </div>
+
+      {editing ? (
+        <>
+          <button
+            onClick={saveEdit}
+            disabled={saving || !draft.includes('@')}
+            className="p-2 rounded-lg text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
+            title="Salvar"
+            aria-label="Salvar"
+          >
+            <Check size={14} />
+          </button>
+          <button
+            onClick={cancelEdit}
+            disabled={saving}
+            className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5"
+            title="Cancelar"
+            aria-label="Cancelar"
+          >
+            <X size={14} />
+          </button>
+        </>
+      ) : (
+        <>
+          <select
+            value={entry.plan}
+            onChange={(e) => onPlanChange(e.target.value as Plan)}
+            className="h-8 px-2 rounded-lg bg-bg-elevated border border-border text-xs"
+          >
+            <option value="basic">Básico</option>
+            <option value="pro">PRO</option>
+          </select>
+          <button
+            onClick={startEdit}
+            className="p-2 rounded-lg text-text-muted hover:text-brand-cyan-300 hover:bg-brand-cyan-500/10"
+            title="Editar email"
+            aria-label="Editar email"
+          >
+            <Edit3 size={14} />
+          </button>
+          <button
+            onClick={onRemove}
+            className="p-2 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10"
+            title="Remover"
+            aria-label="Remover"
+          >
+            <Trash2 size={14} />
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 

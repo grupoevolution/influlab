@@ -77,13 +77,9 @@ export async function POST(req: Request) {
   }
 
   if (approveStatuses.includes(status)) {
-    const plan = resolvePlan(db.platformMappings, 'ticto', productId, productName);
-    if (!plan) {
-      return NextResponse.json({
-        ignored: true,
-        reason: `no mapping for ${productId}/${productName}`,
-      });
-    }
+    // Mesma estratégia da Kiwify: se houver mapping usa o plano, senão libera no Básico.
+    const mapped = resolvePlan(db.platformMappings, 'ticto', productId, productName);
+    const plan: Plan = mapped ?? 'basic';
 
     const entry: WhitelistEntry = {
       email,
@@ -98,7 +94,12 @@ export async function POST(req: Request) {
       if (idx >= 0) db.whitelist[idx] = { ...db.whitelist[idx], plan, source: 'webhook', platform: 'ticto' };
       else db.whitelist.unshift(entry);
     });
-    return NextResponse.json({ ok: true, action: 'added', plan });
+    return NextResponse.json({
+      ok: true,
+      action: 'added',
+      plan,
+      autoDefault: !mapped,
+    });
   }
 
   return NextResponse.json({ ignored: true, status });

@@ -22,13 +22,21 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      // Backend valida contra whitelist e seta cookie influlab_student.
-      // Sempre entra no /app (se não estiver liberado, /app mostra BlurLock).
-      await fetch('/api/student/login', {
+      // Backend valida contra whitelist. Se OK, seta cookie e libera /app.
+      // Se NÃO está na whitelist, retorna 403 com mensagem — bloqueio real.
+      const r = await fetch('/api/student/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setError(
+          j?.error ??
+            'Esse email não tem acesso liberado. Verifique se digitou o mesmo email da compra ou fale com o suporte.',
+        );
+        return;
+      }
       router.push('/app');
     } catch {
       setError('Não foi possível conectar. Tente novamente.');

@@ -24,7 +24,7 @@ export function BottomNav({ onMore }: { onMore: () => void }) {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 pointer-events-none"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 pointer-events-none"
       aria-label="Navegação principal"
     >
       {/* gradient fade for visual contrast */}

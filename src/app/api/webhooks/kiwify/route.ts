@@ -79,15 +79,19 @@ export async function POST(req: Request) {
   }
 
   if (approveStatuses.includes(status) || eventName.includes('approved')) {
-    const plan = resolvePlan(db.platformMappings, 'kiwify', productId, productName);
-    if (!plan) {
-      return NextResponse.json({
-        ignored: true,
-        reason: `no mapping for product ${productId}/${productName}`,
-      });
-    }
+    // Estratégia: se houver mapeamento explícito, usa o plano dele.
+    // Senão libera no plano Básico por padrão — todo comprador entra,
+    // o admin promove pra PRO depois (ou mapeia produtos específicos
+    // em /admin/integracoes pra forçar PRO automático).
+    const mapped = resolvePlan(db.platformMappings, 'kiwify', productId, productName);
+    const plan: Plan = mapped ?? 'basic';
     await addEmail(email, plan, 'kiwify', productId || productName);
-    return NextResponse.json({ ok: true, action: 'added', plan });
+    return NextResponse.json({
+      ok: true,
+      action: 'added',
+      plan,
+      autoDefault: !mapped,
+    });
   }
 
   return NextResponse.json({ ignored: true, status });

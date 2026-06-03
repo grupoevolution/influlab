@@ -12,7 +12,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
       <div className="h-full px-4 md:px-6 flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
+          className="md:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
           aria-label="Abrir menu"
         >
           <Menu size={20} />

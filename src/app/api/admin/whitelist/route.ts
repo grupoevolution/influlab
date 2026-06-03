@@ -42,21 +42,54 @@ export async function POST(req: Request) {
   return NextResponse.json({ data: entry }, { status: 201 });
 }
 
+/**
+ * PATCH aceita 2 modos:
+ *  - { email, plan }            → muda o plano
+ *  - { email, newEmail }        → renomeia o email (correção de digitação)
+ *  - { email, plan, newEmail }  → ambos numa só chamada
+ */
 export async function PATCH(req: Request) {
   const ac = await requireAdmin();
   if (!ac.ok) return NextResponse.json({ error: 'no auth' }, { status: ac.status });
-  const { email, plan } = (await req.json()) as { email?: string; plan?: Plan };
-  if (!email || !plan) return NextResponse.json({ error: 'email e plan obrigatórios' }, { status: 400 });
+
+  const body = (await req.json()) as { email?: string; plan?: Plan; newEmail?: string };
+  const { email, plan, newEmail } = body;
+
+  if (!email) {
+    return NextResponse.json({ error: 'email obrigatório' }, { status: 400 });
+  }
+  if (!plan && !newEmail) {
+    return NextResponse.json({ error: 'informe plan ou newEmail' }, { status: 400 });
+  }
 
   const e = email.trim().toLowerCase();
+  const ne = newEmail?.trim().toLowerCase();
+  if (newEmail !== undefined && (!ne || !ne.includes('@'))) {
+    return NextResponse.json({ error: 'newEmail inválido' }, { status: 400 });
+  }
+
   const updated = await mutateDB((db) => {
     const idx = db.whitelist.findIndex((w) => w.email === e);
     if (idx === -1) return null;
-    db.whitelist[idx] = { ...db.whitelist[idx], plan };
+
+    // Renomear (e novo email já não pode existir em outra entrada)
+    if (ne && ne !== e) {
+      const conflict = db.whitelist.findIndex((w) => w.email === ne);
+      if (conflict !== -1 && conflict !== idx) {
+        return { __error: 'já existe uma entrada com esse novo email' } as const;
+      }
+      db.whitelist[idx] = { ...db.whitelist[idx], email: ne };
+    }
+    if (plan) {
+      db.whitelist[idx] = { ...db.whitelist[idx], plan };
+    }
     return db.whitelist[idx];
   });
 
   if (!updated) return NextResponse.json({ error: 'não encontrado' }, { status: 404 });
+  if ('__error' in (updated as Record<string, unknown>)) {
+    return NextResponse.json({ error: (updated as { __error: string }).__error }, { status: 409 });
+  }
   return NextResponse.json({ data: updated });
 }
 
