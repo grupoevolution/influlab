@@ -141,6 +141,19 @@ export type PlatformProductMapping = {
   createdAt: string;
 };
 
+/**
+ * Configurações globais do site (links, textos editáveis pelo admin).
+ * Tudo opcional — front sempre usa fallback se faltar.
+ */
+export type SiteSettings = {
+  /** URL pra onde o link "Conheça o InfluLab" da tela de login leva (página de venda). */
+  purchaseUrl?: string;
+  /** Texto do botão/link (default: "Conheça o InfluLab"). */
+  purchaseLabel?: string;
+  /** Texto explicativo abaixo do form de login. */
+  loginHelperText?: string;
+};
+
 /** Configuração das integrações com plataformas */
 export type PlatformConfig = {
   kiwify?: {
@@ -166,6 +179,7 @@ export type Schema = {
   broadcasts: NotificationBroadcast[];
   platformMappings: PlatformProductMapping[];
   platformConfig: PlatformConfig;
+  siteSettings?: SiteSettings;
 };
 
 export type SchemaKey = keyof Schema;

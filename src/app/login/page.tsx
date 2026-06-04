@@ -2,19 +2,35 @@
 
 import { motion } from 'framer-motion';
 import { ArrowRight, Mail, ShieldCheck, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/brand/Logo';
 import { AnimatedBackground } from '@/components/brand/AnimatedBackground';
 import { CircuitDecor } from '@/components/brand/CircuitDecor';
 import { Button } from '@/components/ui/Button';
+import type { SiteSettings } from '@/lib/db/types';
+
+const DEFAULT_LABEL = 'Conheça o InfluLab';
+const DEFAULT_HELPER =
+  'Seu acesso é validado automaticamente pelo email da compra. Ainda não tem acesso? Conheça o InfluLab no link abaixo.';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [site, setSite] = useState<SiteSettings>({});
+
+  useEffect(() => {
+    fetch('/api/public/site-settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setSite(j.data ?? {}))
+      .catch(() => {});
+  }, []);
+
+  const purchaseUrl = site.purchaseUrl?.trim() || '';
+  const purchaseLabel = site.purchaseLabel?.trim() || DEFAULT_LABEL;
+  const helperText = site.loginHelperText?.trim() || DEFAULT_HELPER;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,25 +149,32 @@ export default function LoginPage() {
               <div className="shrink-0 mt-0.5">
                 <ShieldCheck size={18} className="text-brand-cyan-300" />
               </div>
-              <div className="text-xs text-text-muted leading-relaxed">
-                Seu acesso é validado automaticamente pelo email da compra.
-                Se ainda não é aluno, você pode entrar para conhecer — mas o conteúdo aparecerá bloqueado.
+              <div className="text-xs text-text-muted leading-relaxed whitespace-pre-line">
+                {helperText}
               </div>
             </div>
           </div>
         </motion.div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-center text-xs text-text-subtle mt-6"
-        >
-          Ainda não é aluno?{' '}
-          <Link href="#comprar" className="text-brand-cyan-300 hover:text-brand-cyan-200 font-medium">
-            Conheça o InfluLab
-          </Link>
-        </motion.p>
+        {purchaseUrl && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-center text-xs text-text-subtle mt-6"
+          >
+            Ainda não é aluno?{' '}
+            <a
+              href={purchaseUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brand-cyan-300 hover:text-brand-cyan-200 font-medium inline-flex items-center gap-1"
+            >
+              {purchaseLabel}
+              <ArrowRight size={12} />
+            </a>
+          </motion.p>
+        )}
       </div>
     </div>
   );

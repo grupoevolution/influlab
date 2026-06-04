@@ -19,6 +19,7 @@ const EMPTY_SCHEMA: Schema = {
   broadcasts: [],
   platformMappings: [],
   platformConfig: { kiwify: { enabled: true }, ticto: { enabled: true } },
+  siteSettings: {},
 };
 
 // Estado global compartilhado entre requests (sobrevive a hot reload em dev).

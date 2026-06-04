@@ -7,12 +7,14 @@ const ADMIN_ONLY_PREFIXES = [
   '/admin/acessos',
   '/admin/notificacoes',
   '/admin/integracoes',
+  '/admin/site',
   '/admin/logs',
   '/api/admin/whitelist',
   '/api/admin/broadcasts',
   '/api/admin/access-log',
   '/api/admin/announcements',
   '/api/admin/integrations',
+  '/api/admin/site-settings',
 ];
 
 /**

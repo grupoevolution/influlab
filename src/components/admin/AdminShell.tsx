@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Film,
   Flame,
+  Globe,
   LayoutDashboard,
   Image as ImageIcon,
   LogOut,
@@ -49,6 +50,7 @@ const systemNav: NavItem[] = [
   { href: '/admin/avisos', label: 'Avisos do dia', icon: Megaphone, adminOnly: true },
   { href: '/admin/acessos', label: 'Liberar acessos', icon: UserCheck, adminOnly: true },
   { href: '/admin/integracoes', label: 'Integrações', icon: Plug, adminOnly: true },
+  { href: '/admin/site', label: 'Site & login', icon: Globe, adminOnly: true },
   { href: '/admin/notificacoes', label: 'Notificações', icon: Send, adminOnly: true },
   { href: '/admin/logs', label: 'Log de acessos', icon: CalendarClock, adminOnly: true },
 ];
