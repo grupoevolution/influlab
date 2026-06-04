@@ -12,10 +12,11 @@ export const runtime = 'nodejs';
  *  - order_refunded / refund          → remove email
  *  - chargeback                       → remove email
  *  - subscription_canceled            → remove (se for plano)
- * Os outros eventos (boleto gerado, pix gerado, lead, etc.) são ignorados.
+ * Os outros eventos (boleto gerado, pix gerado, lead, etc.) são ignorados
+ * E NÃO ENTRAM NO LOG — só registramos quando algo de fato acontece.
  *
  * O mapeamento de productId → plano é configurado no painel /admin/integracoes.
- * Se o produto não tiver mapeamento, ignora.
+ * Se o produto não tiver mapeamento, libera no Básico por default.
  */
 export async function POST(req: Request) {
   const raw = await req.text();
@@ -66,26 +67,32 @@ export async function POST(req: Request) {
       '',
   );
 
-  await logIncoming('kiwify', { status, eventName, email, productId, productName });
-
   if (!email) return NextResponse.json({ ignored: true, reason: 'no email' });
 
   const removeStatuses = ['refunded', 'chargeback', 'chargedback', 'canceled', 'cancelled'];
   const approveStatuses = ['approved', 'paid', 'completed'];
 
   if (removeStatuses.includes(status) || eventName.includes('refund') || eventName.includes('chargeback')) {
-    await removeEmail(email);
-    return NextResponse.json({ ok: true, action: 'removed' });
+    const existed = await removeEmail(email);
+    await logWebhookAction('kiwify', email, existed ? 'removed' : 'remove-noop', {
+      status,
+      eventName,
+      productId,
+      productName,
+    });
+    return NextResponse.json({ ok: true, action: existed ? 'removed' : 'remove-noop' });
   }
 
   if (approveStatuses.includes(status) || eventName.includes('approved')) {
-    // Estratégia: se houver mapeamento explícito, usa o plano dele.
-    // Senão libera no plano Básico por padrão — todo comprador entra,
-    // o admin promove pra PRO depois (ou mapeia produtos específicos
-    // em /admin/integracoes pra forçar PRO automático).
     const mapped = resolvePlan(db.platformMappings, 'kiwify', productId, productName);
     const plan: Plan = mapped ?? 'basic';
     await addEmail(email, plan, 'kiwify', productId || productName);
+    await logWebhookAction('kiwify', email, 'added', {
+      plan,
+      autoDefault: !mapped,
+      productId,
+      productName,
+    });
     return NextResponse.json({
       ok: true,
       action: 'added',
@@ -94,7 +101,8 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ ignored: true, status });
+  // Evento intermediário (pix gerado, boleto gerado, etc.) — não loga, não faz nada.
+  return NextResponse.json({ ignored: true, status, eventName });
 }
 
 function extractEmail(p: Record<string, unknown>): string | null {
@@ -134,19 +142,27 @@ async function addEmail(email: string, plan: Plan, platform: string, productRef:
   });
 }
 
-async function removeEmail(email: string) {
-  await mutateDB((db) => {
+/** Retorna true se removeu, false se o email nem existia (no-op silencioso). */
+async function removeEmail(email: string): Promise<boolean> {
+  return mutateDB((db) => {
+    const before = db.whitelist.length;
     db.whitelist = db.whitelist.filter((w) => w.email !== email);
+    return db.whitelist.length < before;
   });
 }
 
-async function logIncoming(platform: string, meta: Record<string, unknown>) {
+async function logWebhookAction(
+  platform: 'kiwify' | 'ticto',
+  email: string,
+  action: 'added' | 'removed' | 'remove-noop',
+  meta: Record<string, unknown>,
+) {
   await logAccess({
     id: newId('al-'),
     type: 'webhook',
-    email: String(meta.email ?? '—'),
+    email,
     role: 'system',
-    meta: { platform, ...meta },
+    meta: { platform, action, ...meta },
     at: new Date().toISOString(),
   });
 }

@@ -6,12 +6,12 @@ export const runtime = 'nodejs';
 
 /**
  * Webhook Ticto.
- * Eventos relevantes:
- *  - Compra aprovada → adiciona email
- *  - Reembolso/chargeback → remove
+ * Loga só quando uma AÇÃO de fato acontece (added/removed). Eventos
+ * intermediários (pix gerado, boleto gerado, etc.) entram silenciosos.
  *
- * Ticto envia um campo "token" no payload pra validação (configurado no painel da Ticto).
- * Se webhookSecret estiver setado no admin/integracoes, comparamos.
+ * Ticto envia um campo "token" no payload pra validação (configurado no
+ * painel da Ticto). Se webhookSecret estiver setado no admin/integracoes,
+ * comparamos.
  */
 export async function POST(req: Request) {
   const raw = await req.text();
@@ -55,29 +55,22 @@ export async function POST(req: Request) {
       '',
   );
 
-  await logAccess({
-    id: newId('al-'),
-    type: 'webhook',
-    email: email ?? '—',
-    role: 'system',
-    meta: { platform: 'ticto', status, productId, productName },
-    at: new Date().toISOString(),
-  });
-
   if (!email) return NextResponse.json({ ignored: true, reason: 'no email' });
 
   const removeStatuses = ['refunded', 'refund', 'chargeback', 'chargedback', 'canceled', 'cancelled'];
   const approveStatuses = ['authorized', 'approved', 'paid', 'completed', 'order_authorized'];
 
   if (removeStatuses.includes(status)) {
-    await mutateDB((db) => {
-      db.whitelist = db.whitelist.filter((w) => w.email !== email);
+    const existed = await removeEmail(email);
+    await logWebhookAction('ticto', email, existed ? 'removed' : 'remove-noop', {
+      status,
+      productId,
+      productName,
     });
-    return NextResponse.json({ ok: true, action: 'removed' });
+    return NextResponse.json({ ok: true, action: existed ? 'removed' : 'remove-noop' });
   }
 
   if (approveStatuses.includes(status)) {
-    // Mesma estratégia da Kiwify: se houver mapping usa o plano, senão libera no Básico.
     const mapped = resolvePlan(db.platformMappings, 'ticto', productId, productName);
     const plan: Plan = mapped ?? 'basic';
 
@@ -94,6 +87,13 @@ export async function POST(req: Request) {
       if (idx >= 0) db.whitelist[idx] = { ...db.whitelist[idx], plan, source: 'webhook', platform: 'ticto' };
       else db.whitelist.unshift(entry);
     });
+
+    await logWebhookAction('ticto', email, 'added', {
+      plan,
+      autoDefault: !mapped,
+      productId,
+      productName,
+    });
     return NextResponse.json({
       ok: true,
       action: 'added',
@@ -102,6 +102,7 @@ export async function POST(req: Request) {
     });
   }
 
+  // Evento intermediário — não loga, não faz nada.
   return NextResponse.json({ ignored: true, status });
 }
 
@@ -125,4 +126,29 @@ function resolvePlan(
       (m.productId === productId || (productName && m.productName === productName)),
   );
   return found?.plan ?? null;
+}
+
+/** Retorna true se removeu, false se o email nem existia. */
+async function removeEmail(email: string): Promise<boolean> {
+  return mutateDB((db) => {
+    const before = db.whitelist.length;
+    db.whitelist = db.whitelist.filter((w) => w.email !== email);
+    return db.whitelist.length < before;
+  });
+}
+
+async function logWebhookAction(
+  platform: 'kiwify' | 'ticto',
+  email: string,
+  action: 'added' | 'removed' | 'remove-noop',
+  meta: Record<string, unknown>,
+) {
+  await logAccess({
+    id: newId('al-'),
+    type: 'webhook',
+    email,
+    role: 'system',
+    meta: { platform, action, ...meta },
+    at: new Date().toISOString(),
+  });
 }
