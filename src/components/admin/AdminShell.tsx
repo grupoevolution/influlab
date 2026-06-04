@@ -115,8 +115,11 @@ export function AdminShell({
       {/* Main content */}
       <div className="md:pl-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 h-16 border-b border-border-subtle bg-bg/80 backdrop-blur-xl">
-          <div className="h-full px-4 md:px-8 flex items-center gap-3">
+        <header
+          className="sticky top-0 z-30 border-b border-border-subtle bg-bg/80 backdrop-blur-xl"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
+          <div className="h-16 px-4 md:px-8 flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
               className="md:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
@@ -220,7 +223,10 @@ function SidebarContent({
   return (
     <>
       {/* Logo */}
-      <div className="px-6 h-16 border-b border-border-subtle flex items-center justify-between">
+      <div
+        className="px-6 border-b border-border-subtle flex items-center justify-between"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)', paddingBottom: '0.5rem', minHeight: '4rem' }}
+      >
         <Logo size="sm" />
         <span
           className={cn(

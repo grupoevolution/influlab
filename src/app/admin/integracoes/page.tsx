@@ -176,16 +176,35 @@ function PlatformCard({
         <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-300 mb-2">
           Produtos da {platformLabel} → Planos InfluLab
         </p>
-        <p className="text-xs text-text-muted leading-relaxed mb-3">
-          Diga qual produto na {platformLabel} libera qual plano no InfluLab. Webhooks de produtos não mapeados são ignorados.
-        </p>
+        <div className="text-xs text-text-muted leading-relaxed mb-3 space-y-1">
+          <p>
+            Use isso pra forçar produtos específicos no plano <strong className="text-amber-300">PRO</strong>.
+            Webhooks de produtos <strong>não mapeados</strong> liberam automaticamente no plano Básico.
+          </p>
+          {platform === 'kiwify' && (
+            <p className="text-text-subtle">
+              <strong className="text-text-secondary">Como mapear:</strong>{' '}
+              cole o <strong>código</strong> que aparece no link de compra
+              (ex: <code className="text-brand-cyan-300 font-mono">pay.kiwify.com.br/<strong>fbgho4j</strong></code>)
+              {' '}<em>ou</em> o <strong>nome exato</strong> do produto. Qualquer um dos dois bate com o webhook.
+            </p>
+          )}
+          {platform === 'ticto' && (
+            <p className="text-text-subtle">
+              <strong className="text-text-secondary">Como mapear:</strong>{' '}
+              use o <strong>ID</strong> do produto (achável no painel da Ticto, na aba do produto){' '}
+              <em>ou</em> o <strong>nome exato</strong>. Qualquer um dos dois bate com o webhook.
+            </p>
+          )}
+        </div>
 
         <div className="space-y-2 mb-3">
           {mappings.length === 0 && (
-            <div className="rounded-xl bg-amber-500/10 border border-amber-400/30 p-3 flex items-start gap-2">
-              <AlertCircle size={14} className="text-amber-300 mt-0.5 shrink-0" />
+            <div className="rounded-xl bg-bg-elevated border border-border p-3 flex items-start gap-2">
+              <AlertCircle size={14} className="text-text-muted mt-0.5 shrink-0" />
               <p className="text-xs text-text-secondary">
-                Nenhum produto mapeado ainda. Os webhooks vão chegar mas serão ignorados.
+                Nenhum mapeamento ainda. Tudo bem — todos os webhooks aprovados liberam o aluno
+                no plano <strong className="text-brand-cyan-300">Básico</strong> por padrão.
               </p>
             </div>
           )}
@@ -226,14 +245,18 @@ function PlatformCard({
             <textarea
               value={productIds}
               onChange={(e) => setProductIds(e.target.value)}
-              placeholder="ID do produto (vários, separados por vírgula)"
+              placeholder={
+                platform === 'kiwify'
+                  ? 'Código do produto (ex: fbgho4j) — vários separados por vírgula'
+                  : 'ID do produto — vários separados por vírgula'
+              }
               rows={2}
               className="h-[60px] px-3 py-2 rounded-lg bg-bg-elevated border border-border text-xs resize-none"
             />
             <input
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
-              placeholder="Nome do produto (opcional)"
+              placeholder="OU nome exato do produto"
               className="h-9 px-3 rounded-lg bg-bg-elevated border border-border text-xs"
             />
             <select
@@ -247,7 +270,8 @@ function PlatformCard({
           </div>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-[10px] text-text-subtle">
-              Cole vários IDs separados por vírgula — cria um mapeamento pra cada um.
+              Preencha código <strong>OU</strong> nome — um dos dois basta. Cole vários códigos separados por
+              vírgula pra criar múltiplos mapeamentos de uma vez.
             </p>
             <Button
               size="sm"

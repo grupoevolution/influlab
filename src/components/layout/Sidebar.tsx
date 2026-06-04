@@ -80,7 +80,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <aside className="flex h-full flex-col bg-bg-surface/80 backdrop-blur-xl border-r border-border-subtle">
-      <div className="flex items-center px-6 h-16 border-b border-border-subtle">
+      <div
+        className="flex items-center px-6 border-b border-border-subtle"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)', paddingBottom: '0.5rem', minHeight: '4rem' }}
+      >
         <Logo size="sm" />
       </div>
 

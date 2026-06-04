@@ -8,8 +8,11 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [query, setQuery] = useState('');
 
   return (
-    <header className="sticky top-0 z-30 h-16 border-b border-border-subtle bg-bg/70 backdrop-blur-xl">
-      <div className="h-full px-4 md:px-6 flex items-center gap-3">
+    <header
+      className="sticky top-0 z-30 border-b border-border-subtle bg-bg/70 backdrop-blur-xl"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <div className="h-16 px-4 md:px-6 flex items-center gap-3">
         <button
           onClick={onMenuClick}
           className="md:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
