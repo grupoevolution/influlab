@@ -37,8 +37,8 @@ export function BroadcastListener() {
             if (reg) {
               reg.showNotification(b.title, {
                 body: b.body,
-                icon: '/icon.svg',
-                badge: '/icon.svg',
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
                 data: { url: b.url ?? '/app' },
                 tag: `broadcast-${b.id}`,
               });

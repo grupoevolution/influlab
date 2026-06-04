@@ -30,14 +30,19 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   icons: {
-    icon: '/icon.svg',
-    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    shortcut: '/icon-192.png',
   },
   openGraph: {
     title: 'InfluLab',
     description: 'O laboratório de criação para vendas no TikTok Shop.',
     type: 'website',
     siteName: 'InfluLab',
+    images: [{ url: '/icon-1024.png', width: 1024, height: 1024 }],
   },
 };
 

@@ -7,9 +7,9 @@
 // IMPORTANTE: ao mudar a estratégia, suba CACHE_VERSION para invalidar caches antigos
 // nos dispositivos dos usuários (o activate apaga tudo que não bater com o nome atual).
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `influlab-${CACHE_VERSION}`;
-const PRECACHE_URLS = ['/', '/app', '/login', '/manifest.json', '/icon.svg'];
+const PRECACHE_URLS = ['/', '/app', '/login', '/manifest.json', '/icon-192.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -97,8 +97,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'InfluLab', {
       body: data.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
       data: { url: data.url || '/app' },
     }),
   );
