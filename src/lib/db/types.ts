@@ -156,6 +156,15 @@ export type SiteSettings = {
   flowUrl?: string;
   /** URL global do agente GPT — usada por TODOS os produtos. Se vazia, o botão some. */
   gptAgentUrl?: string;
+  /**
+   * URL do vídeo tutorial mostrado no welcome tour (1ª visita) e no card
+   * "Tutorial passo a passo" da home. Aceita:
+   *  - link direto de .mp4/.webm (ex: hospedado no WordPress)
+   *  - YouTube (youtube.com/watch?v=... ou youtu.be/...)
+   *  - Vimeo (vimeo.com/...)
+   * Se vazia, o player não aparece — só o texto explicativo.
+   */
+  tutorialVideoUrl?: string;
 };
 
 /** Configuração das integrações com plataformas */

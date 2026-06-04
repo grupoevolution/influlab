@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
+import { VideoPlayer, VideoPlayerPlaceholder } from '@/components/ui/VideoPlayer';
 
 const TOUR_KEY = 'influlab.tour-completed';
 
@@ -83,6 +84,7 @@ const slides = [
 export function WelcomeTour() {
   const [view, setView] = useState<View | null>(null);
   const [step, setStep] = useState(0);
+  const [tutorialUrl, setTutorialUrl] = useState<string>('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -91,6 +93,14 @@ export function WelcomeTour() {
       const timer = setTimeout(() => setView('welcome'), 600);
       return () => clearTimeout(timer);
     }
+  }, []);
+
+  // Carrega a URL do vídeo tutorial das site-settings (público, sem auth)
+  useEffect(() => {
+    fetch('/api/public/site-settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setTutorialUrl(j?.data?.tutorialVideoUrl ?? ''))
+      .catch(() => {});
   }, []);
 
   const close = () => {
@@ -223,20 +233,12 @@ export function WelcomeTour() {
               >
                 <X size={18} />
               </button>
-              <div className="aspect-video bg-bg-elevated relative flex items-center justify-center">
-                {/* placeholder do vídeo tutorial */}
-                <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
-                <div className="relative text-center px-6">
-                  <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-brand shadow-glow-brand flex items-center justify-center">
-                    <Play size={26} className="text-white ml-1" fill="currentColor" />
-                  </div>
-                  <h3 className="text-xl font-display font-bold mb-2">Vídeo tutorial</h3>
-                  <p className="text-sm text-text-muted max-w-md">
-                    Em breve você verá aqui o tutorial gravado pela equipe InfluLab.
-                    No painel admin você poderá fazer upload do vídeo e personalizar.
-                  </p>
-                </div>
-              </div>
+              {/* Player real se houver URL cadastrada, senão placeholder */}
+              {tutorialUrl ? (
+                <VideoPlayer url={tutorialUrl} />
+              ) : (
+                <VideoPlayerPlaceholder message="O administrador ainda não cadastrou o vídeo tutorial." />
+              )}
               <div className="p-5 flex justify-end gap-2">
                 <button
                   onClick={() => setView('welcome')}

@@ -32,6 +32,7 @@ export async function PATCH(req: Request) {
   if (patch.loginHelperText !== undefined) cleaned.loginHelperText = String(patch.loginHelperText).trim();
   if (patch.flowUrl !== undefined) cleaned.flowUrl = String(patch.flowUrl).trim();
   if (patch.gptAgentUrl !== undefined) cleaned.gptAgentUrl = String(patch.gptAgentUrl).trim();
+  if (patch.tutorialVideoUrl !== undefined) cleaned.tutorialVideoUrl = String(patch.tutorialVideoUrl).trim();
 
   const updated = await mutateDB((db) => {
     db.siteSettings = { ...(db.siteSettings ?? {}), ...cleaned };

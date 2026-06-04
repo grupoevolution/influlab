@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clapperboard, ExternalLink, Globe, Loader2, Save, Sparkles } from 'lucide-react';
+import { Check, Clapperboard, ExternalLink, Globe, Loader2, Play, Save, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
@@ -188,6 +188,55 @@ export default function AdminSitePage() {
                     Geralmente é o link padrão do Flow (https://labs.google/flow).
                   </p>
                 </div>
+              </div>
+            </Card>
+
+            <Card variant="glass" className="p-5">
+              <div className="flex items-start gap-3 mb-5">
+                <div className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand flex items-center justify-center shrink-0">
+                  <Play size={18} className="text-white" fill="currentColor" />
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-lg leading-tight">Vídeo tutorial</h2>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Vídeo de boas-vindas mostrado no <strong>tour da 1ª visita</strong> e no botão{' '}
+                    <strong>"Tutorial passo a passo"</strong> da home. Aceita MP4 direto (hospedado em
+                    qualquer lugar), YouTube ou Vimeo.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                  URL do vídeo
+                </label>
+                <input
+                  type="url"
+                  value={data.tutorialVideoUrl ?? ''}
+                  onChange={(e) => set('tutorialVideoUrl', e.target.value)}
+                  placeholder="https://ttshopia.com/wp-content/uploads/tutorial.mp4"
+                  className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                />
+                <p className="text-[10px] text-text-subtle mt-1 leading-relaxed">
+                  Exemplos aceitos:{' '}
+                  <code className="text-brand-cyan-300 font-mono">…/tutorial.mp4</code>,{' '}
+                  <code className="text-brand-cyan-300 font-mono">youtube.com/watch?v=ABC</code>,{' '}
+                  <code className="text-brand-cyan-300 font-mono">youtu.be/ABC</code>,{' '}
+                  <code className="text-brand-cyan-300 font-mono">vimeo.com/123456</code>. Se ficar vazio,
+                  os tutoriais mostram um placeholder no lugar do player.
+                </p>
+
+                {data.tutorialVideoUrl && (
+                  <a
+                    href={data.tutorialVideoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-cyan-300 hover:text-brand-cyan-200 mt-2"
+                  >
+                    <ExternalLink size={12} />
+                    Abrir URL em nova aba (testar)
+                  </a>
+                )}
               </div>
             </Card>
 

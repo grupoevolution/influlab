@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Clapperboard,
@@ -27,6 +27,7 @@ import {
 } from '@/components/home/DailyHighlights';
 import { CalculatorTeaser } from '@/components/home/CalculatorTeaser';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 import { useHeroGallery } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
@@ -252,6 +253,16 @@ export default function AppHomePage() {
 }
 
 function TutorialModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [tutorialUrl, setTutorialUrl] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/public/site-settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setTutorialUrl(j?.data?.tutorialVideoUrl ?? ''))
+      .catch(() => {});
+  }, [open]);
+
   const steps = [
     {
       n: 1,
@@ -289,6 +300,13 @@ function TutorialModal({ open, onClose }: { open: boolean; onClose: () => void }
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg">
+      {/* Player do vídeo tutorial — só renderiza se URL estiver cadastrada em /admin/site */}
+      {tutorialUrl && (
+        <div className="bg-black">
+          <VideoPlayer url={tutorialUrl} />
+        </div>
+      )}
+
       <div className="p-6 md:p-8">
         <button
           onClick={onClose}
