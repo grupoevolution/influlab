@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ExternalLink, Globe, Loader2, Save } from 'lucide-react';
+import { Check, Clapperboard, ExternalLink, Globe, Loader2, Save, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
@@ -138,6 +138,56 @@ export default function AdminSitePage() {
                     Abrir URL atual em nova aba
                   </a>
                 )}
+              </div>
+            </Card>
+
+            <Card variant="glass" className="p-5">
+              <div className="flex items-start gap-3 mb-5">
+                <div className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand flex items-center justify-center shrink-0">
+                  <Clapperboard size={18} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-lg leading-tight">URLs globais dos produtos</h2>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Usadas por <strong>todos os produtos campeões</strong>. Configura uma vez aqui e cada produto herda no
+                    modal. Se ficar vazio, o botão correspondente não aparece pro aluno.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    URL do agente GPT
+                  </label>
+                  <input
+                    type="url"
+                    value={data.gptAgentUrl ?? ''}
+                    onChange={(e) => set('gptAgentUrl', e.target.value)}
+                    placeholder="https://chatgpt.com/g/seu-agente-influlab"
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                  <p className="text-[10px] text-text-subtle mt-1 inline-flex items-center gap-1">
+                    <Sparkles size={10} />
+                    O mesmo agente é usado pra gerar copy de qualquer produto.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    URL do Google Flow
+                  </label>
+                  <input
+                    type="url"
+                    value={data.flowUrl ?? ''}
+                    onChange={(e) => set('flowUrl', e.target.value)}
+                    placeholder="https://labs.google/flow"
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                  <p className="text-[10px] text-text-subtle mt-1">
+                    Geralmente é o link padrão do Flow (https://labs.google/flow).
+                  </p>
+                </div>
               </div>
             </Card>
 

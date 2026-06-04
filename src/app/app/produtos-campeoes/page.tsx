@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowDown, ArrowUp, Crown, Flame, Minus, Sparkles } from 'lucide-react';
+import { Crown, Flame, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -12,10 +12,10 @@ import { UpgradeProModal } from '@/components/products/UpgradeProModal';
 import { useProducts } from '@/lib/api/client';
 import { useStudentSession } from '@/lib/student-session';
 import type { AdProduct } from '@/lib/db/types';
-import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 type Sort = 'top' | 'recent';
-type Period = 'all' | 'today' | '7d' | '14d';
+type Period = 'all' | 'today' | '7d' | '14d' | '30d';
 
 const sorts: { value: Sort; label: string; icon: typeof Flame }[] = [
   { value: 'top', label: 'Mais vendido', icon: Flame },
@@ -27,7 +27,18 @@ const periods: { value: Period; label: string }[] = [
   { value: 'today', label: 'Hoje' },
   { value: '7d', label: '7 dias' },
   { value: '14d', label: '14 dias' },
+  { value: '30d', label: '30 dias' },
 ];
+
+function periodLabel(p: AdProduct['period']): string {
+  switch (p) {
+    case 'today': return 'hoje';
+    case '7d': return '7d';
+    case '14d': return '14d';
+    case '30d': return '30d';
+    default: return '—';
+  }
+}
 
 export default function ProdutosCampeoesPage() {
   const [sort, setSort] = useState<Sort>('top');
@@ -48,10 +59,15 @@ export default function ProdutosCampeoesPage() {
     const list = products.filter((p) => {
       if (period === 'today' && p.period !== 'today') return false;
       if (period === '7d' && !['today', '7d'].includes(p.period)) return false;
+      if (period === '14d' && !['today', '7d', '14d'].includes(p.period)) return false;
+      if (period === '30d' && !['today', '7d', '14d', '30d'].includes(p.period)) return false;
       if (niche !== 'Todos' && p.niche !== niche) return false;
       return true;
     });
-    if (sort === 'top') return [...list].sort((a, b) => b.salesEstimate - a.salesEstimate);
+    if (sort === 'top') {
+      // Ranking automático por receita (maior primeiro).
+      return [...list].sort((a, b) => (b.revenueEstimate ?? 0) - (a.revenueEstimate ?? 0));
+    }
     return [...list].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
@@ -159,20 +175,9 @@ export default function ProdutosCampeoesPage() {
                 );
               }
 
-              const TrendIcon =
-                product.rankingTrend === 'up'
-                  ? ArrowUp
-                  : product.rankingTrend === 'down'
-                  ? ArrowDown
-                  : Minus;
-              const trendColor =
-                product.rankingTrend === 'up'
-                  ? 'text-emerald-400'
-                  : product.rankingTrend === 'down'
-                  ? 'text-red-400'
-                  : 'text-text-muted';
-
-              const img = product.coverImage || product.image;
+              // Ranking calculado: posição dele na lista ATUAL (já ordenada por receita)
+              const rankingPosition = i + 1;
+              const img = product.image || product.coverImage;
 
               return (
                 <motion.div
@@ -194,18 +199,12 @@ export default function ProdutosCampeoesPage() {
 
                         <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full glass-strong text-[10px]">
                           <Crown size={10} className="text-amber-300" />
-                          <span className="font-bold">#{product.rankingPosition}</span>
+                          <span className="font-bold">#{rankingPosition}</span>
                         </div>
 
                         {product.plan === 'pro' && (
                           <div className="absolute top-2 right-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gradient-brand text-white text-[9px] font-bold uppercase tracking-widest">
                             <Crown size={9} /> Pro
-                          </div>
-                        )}
-
-                        {product.plan !== 'pro' && (
-                          <div className={cn('absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full glass-strong', trendColor)}>
-                            <TrendIcon size={10} />
                           </div>
                         )}
 
@@ -223,7 +222,7 @@ export default function ProdutosCampeoesPage() {
                         </h3>
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="text-text-muted">
-                            <span className="text-text-primary font-semibold">{formatNumber(product.salesEstimate)}</span> vendas
+                            em <span className="text-text-primary font-semibold">{periodLabel(product.period)}</span>
                           </span>
                           <span className="text-emerald-300 font-semibold">{formatCurrency(product.revenueEstimate)}</span>
                         </div>

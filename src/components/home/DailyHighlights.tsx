@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useAnnouncement, useProducts, useVirals } from '@/lib/api/client';
-import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const ANNOUNCEMENT_KEY = 'influlab.announcement-dismissed';
 
@@ -104,8 +104,10 @@ export function AnnouncementBanner() {
 
 export function DailyDrop() {
   const { data: products } = useProducts();
-  const drop = products[0];
+  // Drop = produto #1 do ranking (maior receita)
+  const drop = [...products].sort((a, b) => (b.revenueEstimate ?? 0) - (a.revenueEstimate ?? 0))[0];
   if (!drop) return null;
+  const dropImg = drop.image || drop.coverImage;
 
   return (
     <section className="px-4 md:px-8 pt-6 md:pt-8">
@@ -135,7 +137,7 @@ export function DailyDrop() {
               <div className="relative aspect-[4/3] md:aspect-auto md:min-h-[280px] bg-bg-elevated overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={drop.image}
+                  src={dropImg}
                   alt={drop.name}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
@@ -143,7 +145,7 @@ export function DailyDrop() {
 
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-strong">
                   <Crown size={11} className="text-amber-300" />
-                  <span className="text-[10px] font-bold">#{drop.rankingPosition} hoje</span>
+                  <span className="text-[10px] font-bold">#1 hoje</span>
                 </div>
               </div>
 
@@ -156,20 +158,15 @@ export function DailyDrop() {
                   <h3 className="text-xl md:text-2xl font-display font-bold leading-tight mb-2">
                     {drop.name}
                   </h3>
-                  <p className="text-sm text-text-muted leading-relaxed mb-4 line-clamp-2">{drop.description}</p>
                 </div>
 
                 <div>
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    <div className="rounded-xl bg-bg-elevated/70 border border-border p-2.5">
-                      <div className="text-[10px] uppercase tracking-wider text-text-muted">Vendas/dia</div>
-                      <div className="text-base font-display font-bold mt-0.5">{formatNumber(drop.salesEstimate)}</div>
+                  <div className="rounded-xl bg-bg-elevated/70 border border-border p-3 mb-4">
+                    <div className="text-[10px] uppercase tracking-wider text-text-muted">
+                      Receita em {drop.period === 'today' ? 'hoje' : drop.period === '7d' ? '7 dias' : drop.period === '14d' ? '14 dias' : drop.period === '30d' ? '30 dias' : 'período'}
                     </div>
-                    <div className="rounded-xl bg-bg-elevated/70 border border-border p-2.5">
-                      <div className="text-[10px] uppercase tracking-wider text-text-muted">Receita</div>
-                      <div className="text-base font-display font-bold mt-0.5 text-emerald-300">
-                        {formatCurrency(drop.revenueEstimate)}
-                      </div>
+                    <div className="text-xl font-display font-bold mt-0.5 text-emerald-300">
+                      {formatCurrency(drop.revenueEstimate)}
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-cyan-300 group-hover:gap-2.5 transition-all">

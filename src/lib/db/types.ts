@@ -22,7 +22,7 @@ export type AdProduct = {
   tags: string[];
   description: string;
   videoTranscription?: string; // NOVO: transcrição do vídeo campeão
-  period: 'today' | '7d' | '14d';
+  period: 'today' | '7d' | '14d' | '30d';
   createdAt: string;
 };
 
@@ -152,6 +152,10 @@ export type SiteSettings = {
   purchaseLabel?: string;
   /** Texto explicativo abaixo do form de login. */
   loginHelperText?: string;
+  /** URL global do Google Flow — usada por TODOS os produtos. Se vazia, o botão some. */
+  flowUrl?: string;
+  /** URL global do agente GPT — usada por TODOS os produtos. Se vazia, o botão some. */
+  gptAgentUrl?: string;
 };
 
 /** Configuração das integrações com plataformas */

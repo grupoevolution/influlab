@@ -12,31 +12,55 @@ import {
   Film,
   Image as ImageIcon,
   Tag,
-  TrendingUp,
   Wand2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { CopyButton } from '@/components/ui/CopyButton';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { todayISO, useCalendar } from '@/lib/calendar-store';
 import { TranscriptionModal } from './TranscriptionModal';
-import type { AdProduct } from '@/lib/db/types';
+import type { AdProduct, SiteSettings } from '@/lib/db/types';
+
+function periodLabel(p: AdProduct['period']): string {
+  switch (p) {
+    case 'today': return 'hoje';
+    case '7d': return '7 dias';
+    case '14d': return '14 dias';
+    case '30d': return '30 dias';
+    default: return 'no período';
+  }
+}
 
 export function ProductModal({ product, open, onClose }: { product: AdProduct | null; open: boolean; onClose: () => void }) {
   const { add } = useCalendar();
   const [added, setAdded] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [site, setSite] = useState<SiteSettings>({});
+
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/public/site-settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setSite(j.data ?? {}))
+      .catch(() => {});
+  }, [open]);
 
   if (!product) return null;
+
+  // Imagem única: prefere o campo `image` (novo); cai pra `coverImage` em produtos antigos.
+  const img = product.image || product.coverImage;
+
+  // URLs Flow / GPT são GLOBAIS — vêm de /admin/site. Se não configuradas, botão some.
+  const flowUrl = site.flowUrl?.trim() || '';
+  const gptAgentUrl = site.gptAgentUrl?.trim() || '';
 
   const handleAddToCalendar = () => {
     add({
       productId: product.id,
       productName: product.name,
-      image: product.coverImage || product.image,
+      image: img,
       niche: product.niche,
       scheduledDate: todayISO(),
     });
@@ -50,26 +74,11 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
         {/* Imagem */}
         <div className="md:col-span-2 relative aspect-square md:aspect-auto bg-gradient-to-br from-brand-violet-500/10 to-brand-cyan-500/10 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={product.image} alt={product.name} className="absolute inset-0 h-full w-full object-cover" />
+          <img src={img} alt={product.name} className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/30 to-transparent md:bg-gradient-to-r" />
 
-          <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-strong">
-              <Crown size={14} className="text-amber-300" />
-              <span className="text-xs font-semibold">#{product.rankingPosition} no ranking</span>
-            </div>
-            <Badge
-              variant={
-                product.rankingTrend === 'up' ? 'success' : product.rankingTrend === 'down' ? 'warning' : 'default'
-              }
-            >
-              <TrendingUp size={12} />
-              {product.rankingTrend === 'up' ? 'Em alta' : product.rankingTrend === 'down' ? 'Caindo' : 'Estável'}
-            </Badge>
-          </div>
-
           {product.plan === 'pro' && (
-            <div className="absolute bottom-4 left-4">
+            <div className="absolute top-4 left-4">
               <Badge className="bg-gradient-brand text-white">
                 <Crown size={11} /> Exclusivo PRO
               </Badge>
@@ -80,26 +89,18 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
         {/* Conteúdo */}
         <div className="md:col-span-3 p-6 md:p-7">
           <div className="mb-4">
-            <div className="flex flex-wrap items-center gap-1.5 mb-2">
-              <Badge variant="brand">{product.niche}</Badge>
-              {product.tags?.slice(0, 3).map((t) => (
-                <Badge key={t}>{t}</Badge>
-              ))}
-            </div>
-            <h2 className="text-2xl md:text-3xl font-display font-bold leading-tight mb-2">
+            <Badge variant="brand" className="mb-2">{product.niche}</Badge>
+            <h2 className="text-2xl md:text-3xl font-display font-bold leading-tight">
               {product.name}
             </h2>
-            <p className="text-sm text-text-muted leading-relaxed">{product.description}</p>
           </div>
 
-          {/* Métricas */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
+          {/* Métricas — receita do período + comissão */}
+          <div className="grid grid-cols-2 gap-2 mb-5">
             <div className="rounded-xl border border-border bg-bg-elevated p-3">
-              <div className="text-[10px] uppercase tracking-wider text-text-muted">Vendas/dia</div>
-              <div className="text-lg font-display font-bold mt-0.5">{formatNumber(product.salesEstimate)}</div>
-            </div>
-            <div className="rounded-xl border border-border bg-bg-elevated p-3">
-              <div className="text-[10px] uppercase tracking-wider text-text-muted">Receita</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted">
+                Em {periodLabel(product.period)}
+              </div>
               <div className="text-lg font-display font-bold mt-0.5 text-emerald-300">
                 {formatCurrency(product.revenueEstimate)}
               </div>
@@ -132,8 +133,8 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
                   </Button>
                 </a>
               )}
-              {(product.imagePromptUrl || product.image) && (
-                <a href={product.imagePromptUrl || product.image} target="_blank" rel="noreferrer" download>
+              {img && (
+                <a href={img} target="_blank" rel="noreferrer" download>
                   <Button variant="secondary" size="md" className="w-full" leftIcon={<Download size={14} />}>
                     Baixar imagem
                   </Button>
@@ -142,15 +143,15 @@ export function ProductModal({ product, open, onClose }: { product: AdProduct | 
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {product.gptAgentUrl && (
-                <a href={product.gptAgentUrl} target="_blank" rel="noreferrer">
+              {gptAgentUrl && (
+                <a href={gptAgentUrl} target="_blank" rel="noreferrer">
                   <Button variant="outline" size="md" className="w-full" leftIcon={<Bot size={14} />}>
                     Agente GPT
                   </Button>
                 </a>
               )}
-              {product.flowUrl && (
-                <a href={product.flowUrl} target="_blank" rel="noreferrer">
+              {flowUrl && (
+                <a href={flowUrl} target="_blank" rel="noreferrer">
                   <Button variant="outline" size="md" className="w-full" leftIcon={<Wand2 size={14} />}>
                     Abrir Flow
                   </Button>
