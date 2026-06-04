@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Crown, Edit3, FileSpreadsheet, Mail, Plus, Search, Trash2, Upload, UserCheck, X } from 'lucide-react';
+import { Check, Crown, Edit3, FileSpreadsheet, History, Mail, Plus, Search, Trash2, Upload, UserCheck, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
@@ -18,6 +18,7 @@ export default function AdminAcessosPage() {
   const [filterPlan, setFilterPlan] = useState<'all' | Plan>('all');
   const [loading, setLoading] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [recoverOpen, setRecoverOpen] = useState(false);
 
   const load = async () => {
     const r = await fetch('/api/admin/whitelist', { cache: 'no-store' });
@@ -108,9 +109,14 @@ export default function AdminAcessosPage() {
         title="Liberar acessos"
         description="Emails autorizados a usar o sistema como aluno. Defina o plano (Básico ou PRO) de cada um."
         actions={
-          <Button leftIcon={<FileSpreadsheet size={14} />} variant="secondary" onClick={() => setImportOpen(true)}>
-            Importar CSV
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button leftIcon={<History size={14} />} variant="ghost" onClick={() => setRecoverOpen(true)}>
+              Recuperar webhooks
+            </Button>
+            <Button leftIcon={<FileSpreadsheet size={14} />} variant="secondary" onClick={() => setImportOpen(true)}>
+              Importar CSV
+            </Button>
+          </div>
         }
       />
 
@@ -208,7 +214,170 @@ export default function AdminAcessosPage() {
       </section>
 
       <ImportCsvModal open={importOpen} onClose={() => setImportOpen(false)} onDone={load} />
+      <RecoverFromLogModal open={recoverOpen} onClose={() => setRecoverOpen(false)} onDone={load} />
     </>
+  );
+}
+
+function RecoverFromLogModal({
+  open,
+  onClose,
+  onDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [preview, setPreview] = useState<{
+    foundInLog: number;
+    alreadyInWhitelist: number;
+    wouldAdd: number;
+    sample: string[];
+  } | null>(null);
+  const [result, setResult] = useState<{ added: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState<'intro' | 'preview' | 'done'>('intro');
+
+  const fetchPreview = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/admin/whitelist/recover-from-log?dryRun=1', { method: 'POST' });
+      const j = await r.json();
+      setPreview(j);
+      setStage('preview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const apply = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/admin/whitelist/recover-from-log', { method: 'POST' });
+      const j = await r.json();
+      setResult({ added: j.added ?? 0 });
+      setStage('done');
+      onDone();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = () => {
+    setPreview(null);
+    setResult(null);
+    setStage('intro');
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      maxWidth="md"
+    >
+      <div className="p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-brand flex items-center justify-center">
+            <History size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-display font-bold leading-tight">Recuperar webhooks antigos</h3>
+            <p className="text-xs text-text-muted">
+              Resgata emails que chegaram via webhook mas foram ignorados antes do fix
+            </p>
+          </div>
+        </div>
+
+        {stage === 'intro' && (
+          <>
+            <div className="rounded-xl bg-amber-500/10 border border-amber-400/30 p-3 text-xs leading-relaxed">
+              <p className="text-amber-200 font-semibold mb-1">O que essa ação faz?</p>
+              <p className="text-text-secondary">
+                Varre o <strong>log de acessos</strong> e adiciona à whitelist todos os emails
+                que receberam um webhook (de qualquer plataforma), no plano <strong>Básico</strong>.
+                Idempotente: se o email já estiver liberado, não muda nada.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button onClick={fetchPreview} loading={loading}>
+                Ver preview
+              </Button>
+            </div>
+          </>
+        )}
+
+        {stage === 'preview' && preview && (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-bg-elevated border border-border p-3 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-text-muted">Total no log</p>
+                <p className="text-xl font-display font-bold">{preview.foundInLog}</p>
+              </div>
+              <div className="rounded-xl bg-bg-elevated border border-border p-3 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-text-muted">Já liberados</p>
+                <p className="text-xl font-display font-bold text-text-secondary">{preview.alreadyInWhitelist}</p>
+              </div>
+              <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-emerald-300">Vão entrar</p>
+                <p className="text-xl font-display font-bold text-emerald-200">{preview.wouldAdd}</p>
+              </div>
+            </div>
+            {preview.sample.length > 0 && (
+              <div className="rounded-xl bg-bg-elevated border border-border p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-cyan-300 mb-1.5">
+                  Amostra dos emails que serão liberados
+                </p>
+                <ul className="text-xs space-y-0.5 text-text-secondary font-mono">
+                  {preview.sample.map((e) => (
+                    <li key={e}>· {e}</li>
+                  ))}
+                  {preview.wouldAdd > preview.sample.length && (
+                    <li className="text-text-muted italic">
+                      ... e mais {preview.wouldAdd - preview.sample.length}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={reset}>
+                Voltar
+              </Button>
+              <Button onClick={apply} loading={loading} disabled={preview.wouldAdd === 0}>
+                Liberar {preview.wouldAdd} emails
+              </Button>
+            </div>
+          </>
+        )}
+
+        {stage === 'done' && result && (
+          <>
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-4 text-center">
+              <p className="text-2xl font-display font-bold text-emerald-200 mb-1">
+                {result.added}
+              </p>
+              <p className="text-sm text-text-secondary">emails foram liberados no plano Básico</p>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  reset();
+                  onClose();
+                }}
+              >
+                Fechar
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
   );
 }
 
