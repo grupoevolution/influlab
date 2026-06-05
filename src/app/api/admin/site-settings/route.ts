@@ -33,6 +33,10 @@ export async function PATCH(req: Request) {
   if (patch.flowUrl !== undefined) cleaned.flowUrl = String(patch.flowUrl).trim();
   if (patch.gptAgentUrl !== undefined) cleaned.gptAgentUrl = String(patch.gptAgentUrl).trim();
   if (patch.tutorialVideoUrl !== undefined) cleaned.tutorialVideoUrl = String(patch.tutorialVideoUrl).trim();
+  if (patch.upgradeTitle !== undefined) cleaned.upgradeTitle = String(patch.upgradeTitle).trim();
+  if (patch.upgradeDescription !== undefined) cleaned.upgradeDescription = String(patch.upgradeDescription).trim();
+  if (patch.upgradeButtonLabel !== undefined) cleaned.upgradeButtonLabel = String(patch.upgradeButtonLabel).trim();
+  if (patch.upgradeUrl !== undefined) cleaned.upgradeUrl = String(patch.upgradeUrl).trim();
 
   const updated = await mutateDB((db) => {
     db.siteSettings = { ...(db.siteSettings ?? {}), ...cleaned };

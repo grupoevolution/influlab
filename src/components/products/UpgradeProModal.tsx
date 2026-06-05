@@ -1,16 +1,39 @@
 'use client';
 
 import { Crown, X, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import type { SiteSettings } from '@/lib/db/types';
+
+const DEFAULT_TITLE = 'Vire PRO e desbloqueie tudo';
+const DEFAULT_DESCRIPTION =
+  'Acesse os produtos premium com maior comissão e ticket alto. Esses são os produtos que os top criadores estão usando para faturar 5-6 dígitos.';
+const DEFAULT_BUTTON = 'Quero fazer upgrade';
 
 export function UpgradeProModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [site, setSite] = useState<SiteSettings>({});
+
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/public/site-settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setSite(j?.data ?? {}))
+      .catch(() => {});
+  }, [open]);
+
+  const title = site.upgradeTitle?.trim() || DEFAULT_TITLE;
+  const description = site.upgradeDescription?.trim() || DEFAULT_DESCRIPTION;
+  const buttonLabel = site.upgradeButtonLabel?.trim() || DEFAULT_BUTTON;
+  const upgradeUrl = site.upgradeUrl?.trim() || '';
+
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <div className="p-7 text-center">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5"
+          aria-label="Fechar"
         >
           <X size={18} />
         </button>
@@ -29,19 +52,24 @@ export function UpgradeProModal({ open, onClose }: { open: boolean; onClose: () 
           </span>
         </div>
 
-        <h2 className="text-2xl font-display font-bold mb-2 leading-tight">
-          Vire <span className="text-gradient-brand">PRO</span> e desbloqueie tudo
+        <h2 className="text-2xl font-display font-bold mb-2 leading-tight whitespace-pre-line">
+          {title}
         </h2>
-        <p className="text-sm text-text-muted leading-relaxed mb-6">
-          Acesse os <strong className="text-text-primary">produtos premium</strong> com maior comissão
-          e ticket alto. Esses são os produtos que os top criadores estão usando para faturar 5-6 dígitos.
+        <p className="text-sm text-text-muted leading-relaxed mb-6 whitespace-pre-line">
+          {description}
         </p>
 
-        <a href="#upgrade" className="block">
-          <Button size="lg" className="w-full" leftIcon={<Crown size={16} />}>
-            Quero fazer upgrade
-          </Button>
-        </a>
+        {upgradeUrl ? (
+          <a href={upgradeUrl} target="_blank" rel="noreferrer" className="block">
+            <Button size="lg" className="w-full" leftIcon={<Crown size={16} />}>
+              {buttonLabel}
+            </Button>
+          </a>
+        ) : (
+          <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-400/30 rounded-xl px-3 py-2">
+            ⚠️ URL de upgrade não configurada. Configure em <strong>/admin/site</strong>.
+          </div>
+        )}
 
         <button
           onClick={onClose}

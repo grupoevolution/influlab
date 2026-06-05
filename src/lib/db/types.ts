@@ -165,6 +165,16 @@ export type SiteSettings = {
    * Se vazia, o player não aparece — só o texto explicativo.
    */
   tutorialVideoUrl?: string;
+
+  // === Modal de upgrade PRO (quando aluno básico tenta abrir produto PRO) ===
+  /** Título do modal de upgrade. Default: "Vire PRO e desbloqueie tudo". */
+  upgradeTitle?: string;
+  /** Texto explicativo do modal. */
+  upgradeDescription?: string;
+  /** Texto do botão CTA. Default: "Quero fazer upgrade". */
+  upgradeButtonLabel?: string;
+  /** URL pra fazer upgrade pro plano PRO (checkout). Se vazia, o botão some. */
+  upgradeUrl?: string;
 };
 
 /** Configuração das integrações com plataformas */

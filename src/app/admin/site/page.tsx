@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clapperboard, ExternalLink, Globe, Loader2, Play, Save, Sparkles } from 'lucide-react';
+import { Check, Clapperboard, Crown, ExternalLink, Globe, Loader2, Play, Save, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
@@ -10,6 +10,10 @@ import type { SiteSettings } from '@/lib/db/types';
 const DEFAULT_LABEL = 'Conheça o InfluLab';
 const DEFAULT_HELPER =
   'Seu acesso é validado automaticamente pelo email da compra. Ainda não tem acesso? Conheça o InfluLab no link abaixo.';
+const DEFAULT_UPGRADE_TITLE = 'Vire PRO e desbloqueie tudo';
+const DEFAULT_UPGRADE_DESCRIPTION =
+  'Acesse os produtos premium com maior comissão e ticket alto. Esses são os produtos que os top criadores estão usando para faturar 5-6 dígitos.';
+const DEFAULT_UPGRADE_BUTTON = 'Quero fazer upgrade';
 
 export default function AdminSitePage() {
   const [data, setData] = useState<SiteSettings>({});
@@ -235,6 +239,91 @@ export default function AdminSitePage() {
                   >
                     <ExternalLink size={12} />
                     Abrir URL em nova aba (testar)
+                  </a>
+                )}
+              </div>
+            </Card>
+
+            <Card variant="glass" className="p-5">
+              <div className="flex items-start gap-3 mb-5">
+                <div className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand flex items-center justify-center shrink-0">
+                  <Crown size={18} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-lg leading-tight">Modal de upgrade PRO</h2>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Aparece quando um aluno do <strong>plano Básico</strong> toca em um produto que requer{' '}
+                    <strong>plano PRO</strong>. Textos abaixo são editáveis — se vazios, mostram o padrão.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    Título do modal
+                  </label>
+                  <input
+                    type="text"
+                    value={data.upgradeTitle ?? ''}
+                    onChange={(e) => set('upgradeTitle', e.target.value)}
+                    placeholder={DEFAULT_UPGRADE_TITLE}
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    Texto explicativo
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={data.upgradeDescription ?? ''}
+                    onChange={(e) => set('upgradeDescription', e.target.value)}
+                    placeholder={DEFAULT_UPGRADE_DESCRIPTION}
+                    className="w-full px-3 py-2 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    Texto do botão
+                  </label>
+                  <input
+                    type="text"
+                    value={data.upgradeButtonLabel ?? ''}
+                    onChange={(e) => set('upgradeButtonLabel', e.target.value)}
+                    placeholder={DEFAULT_UPGRADE_BUTTON}
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    URL de upgrade <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={data.upgradeUrl ?? ''}
+                    onChange={(e) => set('upgradeUrl', e.target.value)}
+                    placeholder="https://pay.kiwify.com.br/seu-checkout-pro"
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                  <p className="text-[10px] text-text-subtle mt-1">
+                    Pra onde o aluno vai ao clicar em "{data.upgradeButtonLabel || DEFAULT_UPGRADE_BUTTON}".
+                    Se ficar vazio, o botão some.
+                  </p>
+                </div>
+
+                {data.upgradeUrl && (
+                  <a
+                    href={data.upgradeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-cyan-300 hover:text-brand-cyan-200"
+                  >
+                    <ExternalLink size={12} />
+                    Abrir URL atual em nova aba
                   </a>
                 )}
               </div>

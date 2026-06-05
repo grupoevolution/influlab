@@ -169,6 +169,7 @@ export default function ProdutosCampeoesPage() {
                 return (
                   <LockedProductCard
                     key={product.id}
+                    product={product}
                     onClick={() => setUpgradeOpen(true)}
                     delay={i * 0.04}
                   />
