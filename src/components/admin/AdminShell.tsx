@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Briefcase,
   CalendarClock,
   ChevronDown,
   Clapperboard,
@@ -49,6 +50,7 @@ const contentNav: NavItem[] = [
 const systemNav: NavItem[] = [
   { href: '/admin/avisos', label: 'Avisos do dia', icon: Megaphone, adminOnly: true },
   { href: '/admin/acessos', label: 'Liberar acessos', icon: UserCheck, adminOnly: true },
+  { href: '/admin/equipe', label: 'Equipe', icon: Briefcase, adminOnly: true },
   { href: '/admin/integracoes', label: 'Integrações', icon: Plug, adminOnly: true },
   { href: '/admin/site', label: 'Site & login', icon: Globe, adminOnly: true },
   { href: '/admin/notificacoes', label: 'Notificações', icon: Send, adminOnly: true },

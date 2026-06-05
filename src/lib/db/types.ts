@@ -65,6 +65,23 @@ export type ViralVideoDB = {
 };
 
 /**
+ * Funcionário (staff). Cadastrado e gerenciado pelo admin via /admin/equipe.
+ * O admin define email + senha — o staff acessa em /staff/login.
+ * Pode upar produtos, prompts, virais, criadores e galeria, mas NÃO acessa
+ * configurações de sistema (avisos, acessos, integrações, site, logs).
+ */
+export type StaffUser = {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;     // scrypt$salt$hash — nunca devolvido pelo backend
+  active: boolean;          // false = login bloqueado mas registro mantido
+  createdAt: string;
+  createdBy?: string;       // email do admin que criou
+  lastLoginAt?: string;
+};
+
+/**
  * Item da galeria do hero (carrossel de vídeos atrás do "Olá, criador").
  * Limite recomendado: 6-10 itens, vídeos curtos de 2-3s em 9:16.
  */
@@ -196,6 +213,7 @@ export type Schema = {
   virals: ViralVideoDB[];
   creators: CreatorDB[];
   heroGallery: HeroGalleryItem[];
+  staffs: StaffUser[];
   whitelist: WhitelistEntry[];
   announcements: AnnouncementDB[];
   accessLog: AccessLogEntry[];

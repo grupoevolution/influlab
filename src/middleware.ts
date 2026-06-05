@@ -5,6 +5,7 @@ import { decodeSessionEdge, SESSION_COOKIE_NAME } from '@/lib/auth/session-edge'
 const ADMIN_ONLY_PREFIXES = [
   '/admin/avisos',
   '/admin/acessos',
+  '/admin/equipe',
   '/admin/notificacoes',
   '/admin/integracoes',
   '/admin/site',
@@ -15,6 +16,7 @@ const ADMIN_ONLY_PREFIXES = [
   '/api/admin/announcements',
   '/api/admin/integrations',
   '/api/admin/site-settings',
+  '/api/admin/staffs',
 ];
 
 /**
