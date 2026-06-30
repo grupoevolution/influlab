@@ -39,6 +39,8 @@ export type VideoPromptDB = {
   views: number;
   duration: string;
   createdAt: string;
+  pinned?: boolean;         // fixado no topo
+  pinnedOrder?: number;     // ordem entre os fixados (1, 2, 3…)
 };
 
 export type ImagePromptDB = {
@@ -48,6 +50,22 @@ export type ImagePromptDB = {
   prompt: string;
   category: string;
   style: string;
+  createdAt: string;
+  pinned?: boolean;
+  pinnedOrder?: number;
+};
+
+/**
+ * Evento próximo mostrado na home do aluno em "Não perca essas datas".
+ * Se nenhum evento estiver cadastrado, a seção inteira some.
+ */
+export type UpcomingEventDB = {
+  id: string;
+  dateText: string;         // texto livre: "Hoje · 20h", "Amanhã · 09h", "Sex · 18h"
+  title: string;            // "Live: Faturando R$ 10k em 30 dias"
+  accent: 'red' | 'amber' | 'cyan' | 'violet' | 'emerald' | 'pink'; // cor do ícone
+  icon: 'radio' | 'crown' | 'megaphone' | 'calendar' | 'sparkles' | 'flame'; // ícone Lucide
+  order?: number;           // posição (asc). Fallback: createdAt.
   createdAt: string;
 };
 
@@ -214,6 +232,7 @@ export type Schema = {
   creators: CreatorDB[];
   heroGallery: HeroGalleryItem[];
   staffs: StaffUser[];
+  upcomingEvents: UpcomingEventDB[];
   whitelist: WhitelistEntry[];
   announcements: AnnouncementDB[];
   accessLog: AccessLogEntry[];

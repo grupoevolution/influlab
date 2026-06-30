@@ -4,6 +4,7 @@ import { decodeSessionEdge, SESSION_COOKIE_NAME } from '@/lib/auth/session-edge'
 // Caminhos admin-only (staff é bloqueado)
 const ADMIN_ONLY_PREFIXES = [
   '/admin/avisos',
+  '/admin/eventos',
   '/admin/acessos',
   '/admin/equipe',
   '/admin/notificacoes',
@@ -14,6 +15,7 @@ const ADMIN_ONLY_PREFIXES = [
   '/api/admin/broadcasts',
   '/api/admin/access-log',
   '/api/admin/announcements',
+  '/api/admin/events',
   '/api/admin/integrations',
   '/api/admin/site-settings',
   '/api/admin/staffs',

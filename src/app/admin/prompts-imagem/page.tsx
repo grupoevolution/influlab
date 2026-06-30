@@ -24,6 +24,7 @@ export default function AdminPromptsImagemPage() {
         primaryField="title"
         imageField="image"
         secondaryFields={['category', 'style']}
+        pinnable
       />
     </>
   );

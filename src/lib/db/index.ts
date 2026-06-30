@@ -14,6 +14,7 @@ const EMPTY_SCHEMA: Schema = {
   creators: [],
   heroGallery: [],
   staffs: [],
+  upcomingEvents: [],
   whitelist: [],
   announcements: [],
   accessLog: [],

@@ -5,15 +5,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const all = (await listAll('imagePrompts')) ?? [];
+  const all = (await listAll('upcomingEvents')) ?? [];
   const sorted = [...all].sort((a, b) => {
-    const ap = a.pinned ? 0 : 1;
-    const bp = b.pinned ? 0 : 1;
-    if (ap !== bp) return ap - bp;
-    if (a.pinned && b.pinned) {
-      return (a.pinnedOrder ?? 9999) - (b.pinnedOrder ?? 9999);
-    }
-    return 0;
+    const ao = a.order ?? 9999;
+    const bo = b.order ?? 9999;
+    if (ao !== bo) return ao - bo;
+    return (a.createdAt ?? '').localeCompare(b.createdAt ?? '');
   });
   return NextResponse.json({ data: sorted });
 }

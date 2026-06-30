@@ -6,7 +6,8 @@ import { ArrowRight, Calendar, Crown, Flame, Megaphone, Radio, Sparkles, Trendin
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { useAnnouncement, useProducts, useVirals } from '@/lib/api/client';
+import { useAnnouncement, useProducts, useUpcomingEvents, useVirals } from '@/lib/api/client';
+import type { UpcomingEventDB } from '@/lib/db/types';
 import { cn, formatCurrency } from '@/lib/utils';
 
 const ANNOUNCEMENT_KEY = 'influlab.announcement-dismissed';
@@ -254,13 +255,30 @@ export function TrendingNow() {
   );
 }
 
-const events = [
-  { date: 'Hoje · 20h', title: 'Live: Faturando R$ 10k em 30 dias', icon: Radio, color: 'text-red-300', bg: 'from-red-500/20 to-red-400/5' },
-  { date: 'Amanhã · 09h', title: '15 novos produtos campeões liberados', icon: Crown, color: 'text-amber-300', bg: 'from-amber-500/20 to-amber-400/5' },
-  { date: 'Sex · 18h', title: 'Workshop: Editando vídeos virais', icon: Megaphone, color: 'text-brand-cyan-300', bg: 'from-brand-cyan-500/20 to-brand-cyan-400/5' },
-];
+const EVENT_ICONS = {
+  radio: Radio,
+  crown: Crown,
+  megaphone: Megaphone,
+  calendar: Calendar,
+  sparkles: Sparkles,
+  flame: Flame,
+} as const;
+
+const ACCENT_STYLES: Record<UpcomingEventDB['accent'], { color: string; bg: string }> = {
+  red:     { color: 'text-red-300',          bg: 'from-red-500/20 to-red-400/5' },
+  amber:   { color: 'text-amber-300',        bg: 'from-amber-500/20 to-amber-400/5' },
+  cyan:    { color: 'text-brand-cyan-300',   bg: 'from-brand-cyan-500/20 to-brand-cyan-400/5' },
+  violet:  { color: 'text-brand-violet-300', bg: 'from-brand-violet-500/20 to-brand-violet-400/5' },
+  emerald: { color: 'text-emerald-300',      bg: 'from-emerald-500/20 to-emerald-400/5' },
+  pink:    { color: 'text-pink-300',         bg: 'from-pink-500/20 to-pink-400/5' },
+};
 
 export function UpcomingEvents() {
+  const { data: events, loading } = useUpcomingEvents();
+
+  // Se ainda carregando OU lista vazia, NÃO renderiza nada — seção some.
+  if (loading || !events || events.length === 0) return null;
+
   return (
     <section className="px-4 md:px-8 pt-8">
       <div className="max-w-7xl mx-auto">
@@ -276,22 +294,23 @@ export function UpcomingEvents() {
 
         <div className="grid gap-3 md:grid-cols-3">
           {events.map((e, i) => {
-            const Icon = e.icon;
+            const Icon = EVENT_ICONS[e.icon] ?? Calendar;
+            const style = ACCENT_STYLES[e.accent] ?? ACCENT_STYLES.cyan;
             return (
               <motion.div
-                key={e.title}
+                key={e.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
               >
                 <Card variant="glass" hoverable className="p-4 relative overflow-hidden">
-                  <div className={cn('absolute -top-12 -right-12 h-32 w-32 rounded-full blur-2xl opacity-50 bg-gradient-to-br', e.bg)} />
+                  <div className={cn('absolute -top-12 -right-12 h-32 w-32 rounded-full blur-2xl opacity-50 bg-gradient-to-br', style.bg)} />
                   <div className="relative flex items-start gap-3">
                     <div className="h-10 w-10 rounded-xl glass-strong flex items-center justify-center shrink-0">
-                      <Icon size={16} className={e.color} />
+                      <Icon size={16} className={style.color} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className={cn('text-[10px] font-bold uppercase tracking-widest mb-1', e.color)}>{e.date}</div>
+                      <div className={cn('text-[10px] font-bold uppercase tracking-widest mb-1', style.color)}>{e.dateText}</div>
                       <p className="text-sm font-semibold leading-tight">{e.title}</p>
                     </div>
                   </div>

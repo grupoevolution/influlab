@@ -8,6 +8,7 @@ import type {
   HeroGalleryItem,
   ImagePromptDB,
   NotificationBroadcast,
+  UpcomingEventDB,
   ViralVideoDB,
   VideoPromptDB,
 } from '@/lib/db/types';
@@ -50,5 +51,6 @@ export const useImagePrompts = () => useResource<ImagePromptDB[]>('/api/public/i
 export const useVirals = () => useResource<ViralVideoDB[]>('/api/public/virals', []);
 export const useCreators = () => useResource<CreatorDB[]>('/api/public/creators', []);
 export const useHeroGallery = () => useResource<HeroGalleryItem[]>('/api/public/hero-gallery', []);
+export const useUpcomingEvents = () => useResource<UpcomingEventDB[]>('/api/public/events', []);
 export const useAnnouncement = () => useResource<AnnouncementDB | null>('/api/public/announcement', null);
 export const useLatestBroadcast = () => useResource<NotificationBroadcast | null>('/api/public/broadcast', null);

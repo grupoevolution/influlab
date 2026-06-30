@@ -1,13 +1,14 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit3, ImageIcon, Loader2, Plus, Save, Search, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Edit3, ImageIcon, Loader2, Pin, PinOff, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { MediaUpload } from '@/components/admin/MediaUpload';
+import { cn } from '@/lib/utils';
 
 export type FieldType =
   | 'text'
@@ -40,7 +41,15 @@ export type EntityManagerProps<T extends { id: string }> = {
   imageField?: keyof T;
   secondaryFields?: (keyof T)[];
   emptyState?: string;
+  /**
+   * Quando true, mostra botão de fixar/desafixar e setas pra ordenar
+   * os fixados entre si. Os itens precisam ter os campos opcionais
+   * `pinned: boolean` e `pinnedOrder: number`.
+   */
+  pinnable?: boolean;
 };
+
+type Pinnable = { pinned?: boolean; pinnedOrder?: number };
 
 export function EntityManager<T extends { id: string } & Record<string, unknown>>({
   endpoint,
@@ -49,6 +58,7 @@ export function EntityManager<T extends { id: string } & Record<string, unknown>
   imageField,
   secondaryFields,
   emptyState,
+  pinnable = false,
 }: EntityManagerProps<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,11 +93,77 @@ export function EntityManager<T extends { id: string } & Record<string, unknown>
     }
   };
 
+  // Ordena: fixados primeiro (pinnedOrder asc), depois resto (createdAt desc ou ordem original).
+  const ordered = useMemo(() => {
+    if (!pinnable) return items;
+    const list = [...items];
+    list.sort((a, b) => {
+      const ap = (a as unknown as Pinnable).pinned ? 0 : 1;
+      const bp = (b as unknown as Pinnable).pinned ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      if (ap === 0) {
+        // ambos fixados: ordena por pinnedOrder
+        const ao = (a as unknown as Pinnable).pinnedOrder ?? 9999;
+        const bo = (b as unknown as Pinnable).pinnedOrder ?? 9999;
+        return ao - bo;
+      }
+      return 0;
+    });
+    return list;
+  }, [items, pinnable]);
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return items;
+    if (!query.trim()) return ordered;
     const q = query.toLowerCase();
-    return items.filter((it) => String(it[primaryField] ?? '').toLowerCase().includes(q));
-  }, [items, query, primaryField]);
+    return ordered.filter((it) => String(it[primaryField] ?? '').toLowerCase().includes(q));
+  }, [ordered, query, primaryField]);
+
+  const pinnedItems = useMemo(
+    () => (pinnable ? items.filter((i) => (i as unknown as Pinnable).pinned) : []),
+    [items, pinnable],
+  );
+
+  const patchItem = async (id: string, patch: Record<string, unknown>) => {
+    await fetch(`${endpoint}?id=${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  };
+
+  const togglePin = async (item: T) => {
+    const p = item as unknown as Pinnable;
+    if (p.pinned) {
+      // Desafixar: limpa pinnedOrder
+      await patchItem(item.id, { pinned: false, pinnedOrder: null });
+    } else {
+      // Fixar: vai pro fim dos fixados
+      const nextOrder = (pinnedItems.length || 0) + 1;
+      await patchItem(item.id, { pinned: true, pinnedOrder: nextOrder });
+    }
+    load();
+  };
+
+  const movePinned = async (id: string, dir: -1 | 1) => {
+    const sortedPinned = [...pinnedItems].sort(
+      (a, b) =>
+        ((a as unknown as Pinnable).pinnedOrder ?? 9999) -
+        ((b as unknown as Pinnable).pinnedOrder ?? 9999),
+    );
+    const idx = sortedPinned.findIndex((it) => it.id === id);
+    if (idx < 0) return;
+    const swap = idx + dir;
+    if (swap < 0 || swap >= sortedPinned.length) return;
+    const a = sortedPinned[idx];
+    const b = sortedPinned[swap];
+    const ao = (a as unknown as Pinnable).pinnedOrder ?? idx + 1;
+    const bo = (b as unknown as Pinnable).pinnedOrder ?? swap + 1;
+    await Promise.all([
+      patchItem(a.id, { pinnedOrder: bo }),
+      patchItem(b.id, { pinnedOrder: ao }),
+    ]);
+    load();
+  };
 
   return (
     <div className="px-4 md:px-8 py-6">
@@ -133,66 +209,134 @@ export function EntityManager<T extends { id: string } & Record<string, unknown>
           </Card>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((item, i) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.02 }}
-              >
-                <Card variant="glass" hoverable className="overflow-hidden group">
-                  <div className="flex items-stretch">
-                    {imageField && item[imageField] ? (
-                      <div className="relative w-24 h-24 shrink-0 bg-bg-elevated overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={String(item[imageField])}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
-                      </div>
-                    ) : null}
-
-                    <div className="flex-1 min-w-0 p-3.5">
-                      <h3 className="font-semibold text-sm leading-tight mb-1.5 line-clamp-2">
-                        {String(item[primaryField] ?? '—')}
-                      </h3>
-                      {secondaryFields && (
-                        <div className="flex flex-wrap gap-1">
-                          {secondaryFields.map((f) => {
-                            const v = item[f];
-                            if (!v) return null;
-                            return (
-                              <Badge key={String(f)} className="text-[9px] px-1.5 py-0">
-                                {String(v)}
-                              </Badge>
-                            );
-                          })}
+            {filtered.map((item, i) => {
+              const p = item as unknown as Pinnable;
+              const isPinned = !!p.pinned;
+              const pinnedIdx = isPinned
+                ? [...pinnedItems]
+                    .sort(
+                      (a, b) =>
+                        ((a as unknown as Pinnable).pinnedOrder ?? 9999) -
+                        ((b as unknown as Pinnable).pinnedOrder ?? 9999),
+                    )
+                    .findIndex((it) => it.id === item.id)
+                : -1;
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: i * 0.02 }}
+                >
+                  <Card
+                    variant="glass"
+                    hoverable
+                    className={cn(
+                      'overflow-hidden group',
+                      isPinned && 'border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.15)]',
+                    )}
+                  >
+                    <div className="flex items-stretch">
+                      {imageField && item[imageField] ? (
+                        <div className="relative w-24 h-24 shrink-0 bg-bg-elevated overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={String(item[imageField])}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
                         </div>
-                      )}
-                    </div>
+                      ) : null}
 
-                    <div className="flex flex-col border-l border-border-subtle">
-                      <button
-                        onClick={() => setEditing(item)}
-                        className="flex-1 px-3 text-text-muted hover:text-brand-cyan-300 hover:bg-brand-cyan-500/5 transition"
-                        title="Editar"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <div className="h-px bg-border-subtle" />
-                      <button
-                        onClick={() => remove(item.id)}
-                        className="flex-1 px-3 text-text-muted hover:text-red-400 hover:bg-red-500/5 transition"
-                        title="Remover"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex-1 min-w-0 p-3.5">
+                        <div className="flex items-start gap-2 mb-1.5">
+                          {isPinned && (
+                            <Badge variant="warning" className="text-[9px] px-1.5 py-0 shrink-0">
+                              <Pin size={9} /> Fixado #{pinnedIdx + 1}
+                            </Badge>
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-sm leading-tight mb-1.5 line-clamp-2">
+                          {String(item[primaryField] ?? '—')}
+                        </h3>
+                        {secondaryFields && (
+                          <div className="flex flex-wrap gap-1">
+                            {secondaryFields.map((f) => {
+                              const v = item[f];
+                              if (!v) return null;
+                              return (
+                                <Badge key={String(f)} className="text-[9px] px-1.5 py-0">
+                                  {String(v)}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Setas de ordem (só pros fixados) */}
+                        {pinnable && isPinned && pinnedItems.length > 1 && (
+                          <div className="flex gap-1 mt-2">
+                            <button
+                              onClick={() => movePinned(item.id, -1)}
+                              disabled={pinnedIdx === 0}
+                              className="h-6 w-6 rounded-md bg-bg-elevated text-text-muted hover:text-amber-300 disabled:opacity-30 flex items-center justify-center"
+                              title="Subir entre fixados"
+                              aria-label="Subir"
+                            >
+                              <ArrowUp size={11} />
+                            </button>
+                            <button
+                              onClick={() => movePinned(item.id, 1)}
+                              disabled={pinnedIdx === pinnedItems.length - 1}
+                              className="h-6 w-6 rounded-md bg-bg-elevated text-text-muted hover:text-amber-300 disabled:opacity-30 flex items-center justify-center"
+                              title="Descer entre fixados"
+                              aria-label="Descer"
+                            >
+                              <ArrowDown size={11} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col border-l border-border-subtle">
+                        {pinnable && (
+                          <>
+                            <button
+                              onClick={() => togglePin(item)}
+                              className={cn(
+                                'flex-1 px-3 transition',
+                                isPinned
+                                  ? 'text-amber-300 hover:bg-amber-500/10'
+                                  : 'text-text-muted hover:text-amber-300 hover:bg-amber-500/5',
+                              )}
+                              title={isPinned ? 'Desafixar' : 'Fixar no topo'}
+                            >
+                              {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                            </button>
+                            <div className="h-px bg-border-subtle" />
+                          </>
+                        )}
+                        <button
+                          onClick={() => setEditing(item)}
+                          className="flex-1 px-3 text-text-muted hover:text-brand-cyan-300 hover:bg-brand-cyan-500/5 transition"
+                          title="Editar"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <div className="h-px bg-border-subtle" />
+                        <button
+                          onClick={() => remove(item.id)}
+                          className="flex-1 px-3 text-text-muted hover:text-red-400 hover:bg-red-500/5 transition"
+                          title="Remover"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>

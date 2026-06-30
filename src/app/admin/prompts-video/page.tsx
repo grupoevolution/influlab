@@ -28,6 +28,7 @@ export default function AdminPromptsVideoPage() {
         imageField="thumb"
         secondaryFields={['category']}
         emptyState="Nenhum prompt de vídeo cadastrado."
+        pinnable
       />
     </>
   );
