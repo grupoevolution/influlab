@@ -37,6 +37,10 @@ export async function PATCH(req: Request) {
   if (patch.upgradeDescription !== undefined) cleaned.upgradeDescription = String(patch.upgradeDescription).trim();
   if (patch.upgradeButtonLabel !== undefined) cleaned.upgradeButtonLabel = String(patch.upgradeButtonLabel).trim();
   if (patch.upgradeUrl !== undefined) cleaned.upgradeUrl = String(patch.upgradeUrl).trim();
+  if (patch.supportWhatsappUrl !== undefined) cleaned.supportWhatsappUrl = String(patch.supportWhatsappUrl).trim();
+  if (patch.supportLabel !== undefined) cleaned.supportLabel = String(patch.supportLabel).trim();
+  if (patch.supportDescription !== undefined) cleaned.supportDescription = String(patch.supportDescription).trim();
+  if (patch.changelogContent !== undefined) cleaned.changelogContent = String(patch.changelogContent);
 
   const updated = await mutateDB((db) => {
     db.siteSettings = { ...(db.siteSettings ?? {}), ...cleaned };

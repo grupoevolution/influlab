@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clapperboard, Crown, ExternalLink, Globe, Loader2, Play, Save, Sparkles } from 'lucide-react';
+import { Check, Clapperboard, Crown, ExternalLink, Globe, HelpCircle, Loader2, MessageCircle, Play, Save, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
@@ -326,6 +326,106 @@ export default function AdminSitePage() {
                     Abrir URL atual em nova aba
                   </a>
                 )}
+              </div>
+            </Card>
+
+            <Card variant="glass" className="p-5">
+              <div className="flex items-start gap-3 mb-5">
+                <div className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand flex items-center justify-center shrink-0">
+                  <HelpCircle size={18} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-lg leading-tight">Central de ajuda</h2>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Configura os cards da página <strong>/app/ajuda</strong>. Os cards
+                    "Tutorial em vídeo" e "Guia rápido" usam o que já foi configurado acima —
+                    aqui você define <strong>WhatsApp de suporte</strong> e o texto de
+                    <strong> "O que há de novo"</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block inline-flex items-center gap-1.5">
+                    <MessageCircle size={12} />
+                    Link do WhatsApp de suporte
+                  </label>
+                  <input
+                    type="url"
+                    value={data.supportWhatsappUrl ?? ''}
+                    onChange={(e) => set('supportWhatsappUrl', e.target.value)}
+                    placeholder="https://wa.me/5511999999999?text=Ol%C3%A1"
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                  <p className="text-[10px] text-text-subtle mt-1">
+                    Use o formato <code className="text-brand-cyan-300 font-mono">https://wa.me/5511XXXXXXXXX</code>{' '}
+                    (com código do país). Se ficar vazio, o card de suporte não aparece.
+                  </p>
+                  {data.supportWhatsappUrl && (
+                    <a
+                      href={data.supportWhatsappUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-cyan-300 hover:text-brand-cyan-200 mt-2"
+                    >
+                      <ExternalLink size={12} />
+                      Testar link em nova aba
+                    </a>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    Texto do botão de suporte
+                  </label>
+                  <input
+                    type="text"
+                    value={data.supportLabel ?? ''}
+                    onChange={(e) => set('supportLabel', e.target.value)}
+                    placeholder="Suporte"
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block">
+                    Descrição do card de suporte
+                  </label>
+                  <input
+                    type="text"
+                    value={data.supportDescription ?? ''}
+                    onChange={(e) => set('supportDescription', e.target.value)}
+                    placeholder="Fale com a nossa equipe diretamente pelo WhatsApp."
+                    className="w-full h-10 px-3 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary mb-1.5 block inline-flex items-center gap-1.5">
+                    <Sparkles size={12} />
+                    Conteúdo de "O que há de novo"
+                  </label>
+                  <textarea
+                    rows={8}
+                    value={data.changelogContent ?? ''}
+                    onChange={(e) => set('changelogContent', e.target.value)}
+                    placeholder={`Ex:
+
+📅 04/06/2026 — Novidades do sistema:
+• Novo banco de vídeos virais atualizado
+• 15 novos produtos campeões liberados
+• Melhorias no fluxo de criação
+
+📅 28/05/2026:
+• Ajustes na performance
+• Correção de bugs`}
+                    className="w-full px-3 py-2 rounded-xl bg-bg-elevated border border-border text-sm focus:border-brand-violet-400/50 outline-none resize-none font-mono"
+                  />
+                  <p className="text-[10px] text-text-subtle mt-1">
+                    Texto simples com quebras de linha. Se vazio, o card "O que há de novo" não aparece.
+                  </p>
+                </div>
               </div>
             </Card>
 

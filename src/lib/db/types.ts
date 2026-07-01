@@ -80,6 +80,8 @@ export type ViralVideoDB = {
   prompt: string;
   category: string;
   createdAt: string;
+  /** URL do vídeo original no TikTok — abre em nova aba pelo botão do modal. */
+  tiktokUrl?: string;
 };
 
 /**
@@ -200,6 +202,19 @@ export type SiteSettings = {
    * Se vazia, o player não aparece — só o texto explicativo.
    */
   tutorialVideoUrl?: string;
+
+  // === Página de ajuda (/app/ajuda) ===
+  /** URL do WhatsApp de suporte (wa.me/55XXXXXXXXX ou https://wa.me/...) */
+  supportWhatsappUrl?: string;
+  /** Rótulo do card de suporte. Default: "Suporte" */
+  supportLabel?: string;
+  /** Descrição do card de suporte. Default: "Fale com a nossa equipe diretamente pelo WhatsApp." */
+  supportDescription?: string;
+  /**
+   * Conteúdo do modal "O que há de novo" (changelog). Texto simples com
+   * quebras de linha preservadas. Se vazio, o card fica escondido.
+   */
+  changelogContent?: string;
 
   // === Modal de upgrade PRO (quando aluno básico tenta abrir produto PRO) ===
   /** Título do modal de upgrade. Default: "Vire PRO e desbloqueie tudo". */

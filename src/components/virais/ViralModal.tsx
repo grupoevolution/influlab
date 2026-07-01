@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, Flame, Play, Zap } from 'lucide-react';
+import { ExternalLink, Eye, Flame, Play, Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { CopyButton } from '@/components/ui/CopyButton';
@@ -80,6 +80,18 @@ export function ViralModal({ video, open, onClose }: { video: ViralVideo | null;
               </p>
               <p className="text-xs text-text-muted leading-relaxed font-mono whitespace-pre-wrap">{promptText}</p>
             </div>
+          )}
+
+          {video.tiktokUrl && (
+            <a
+              href={video.tiktokUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-2 flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-pink-500/20 to-brand-cyan-500/20 border border-pink-400/40 text-sm font-semibold text-white hover:brightness-110 transition"
+            >
+              <ExternalLink size={14} />
+              Ver vídeo original no TikTok
+            </a>
           )}
 
           <div className="grid grid-cols-2 gap-2">
