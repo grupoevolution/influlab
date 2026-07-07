@@ -97,12 +97,23 @@ export default function BancoImagensPage() {
 
                   <div className="p-2.5 md:p-3">
                     <h3 className="font-semibold text-xs md:text-sm leading-snug mb-2 line-clamp-1">{img.title}</h3>
-                    <CopyButton
-                      text={img.prompt}
-                      label="Copiar prompt"
-                      size="sm"
-                      className="w-full h-8 text-xs"
-                    />
+                    <div className="space-y-1.5">
+                      <CopyButton
+                        text={img.prompt}
+                        label="Copiar prompt da imagem"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                      />
+                      {img.videoPrompt && (
+                        <CopyButton
+                          text={img.videoPrompt}
+                          label="Copiar prompt do vídeo"
+                          size="sm"
+                          variant="secondary"
+                          className="w-full h-8 text-xs"
+                        />
+                      )}
+                    </div>
                   </div>
                 </Card>
               </motion.div>

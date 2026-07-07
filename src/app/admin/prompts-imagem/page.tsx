@@ -11,7 +11,9 @@ const fields: FieldDef[] = [
   { name: 'category', label: 'Categoria', type: 'text',
     helper: 'Você define livre. Ex: Hero, Flat Lay, Lifestyle...' },
   { name: 'style', label: 'Estilo', type: 'text', placeholder: 'Premium, Aesthetic...' },
-  { name: 'prompt', label: 'Prompt completo (Nano Banana)', type: 'textarea', required: true },
+  { name: 'prompt', label: 'Prompt da imagem (Nano Banana)', type: 'textarea', required: true },
+  { name: 'videoPrompt', label: 'Prompt do vídeo (opcional)', type: 'textarea',
+    helper: 'Se preenchido, o aluno vê um segundo botão "Copiar prompt do vídeo". Deixe vazio se não tiver.' },
 ];
 
 export default function AdminPromptsImagemPage() {

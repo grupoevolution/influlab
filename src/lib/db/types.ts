@@ -48,6 +48,7 @@ export type ImagePromptDB = {
   title: string;
   image: string;
   prompt: string;
+  videoPrompt?: string;     // NOVO: prompt de vídeo opcional. Se preenchido, mostra 2º botão.
   category: string;
   style: string;
   createdAt: string;
