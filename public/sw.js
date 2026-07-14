@@ -7,7 +7,7 @@
 // IMPORTANTE: ao mudar a estratégia, suba CACHE_VERSION para invalidar caches antigos
 // nos dispositivos dos usuários (o activate apaga tudo que não bater com o nome atual).
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME = `influlab-${CACHE_VERSION}`;
 const PRECACHE_URLS = ['/', '/app', '/login', '/manifest.json', '/icon-192.png'];
 
