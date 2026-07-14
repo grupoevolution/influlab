@@ -49,7 +49,7 @@ export const categories: Category[] = [
   {
     slug: 'criadores',
     title: 'Top Criadores',
-    description: 'Os alunos que mais estão vendendo no TikTok Shop com a metodologia InfluLab.',
+    description: 'Os alunos que mais estão vendendo no TikTok Shop com a metodologia Influencers Lab.ia.',
     icon: 'Trophy',
     accent: 'emerald',
     items: 0,

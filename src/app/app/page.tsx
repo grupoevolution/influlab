@@ -167,7 +167,7 @@ export default function AppHomePage() {
                       Tutorial <span className="text-gradient-cyan">passo a passo</span>
                     </h3>
                     <p className="text-sm text-text-secondary leading-relaxed mb-5">
-                      Aprenda a usar o InfluLab do zero. Como gerar seu primeiro vídeo viral para o TikTok Shop em minutos.
+                      Aprenda a usar o Influencers Lab.ia do zero. Como gerar seu primeiro vídeo viral para o TikTok Shop em minutos.
                     </p>
 
                     <div className="flex items-center justify-between">
@@ -329,7 +329,7 @@ function TutorialModal({ open, onClose }: { open: boolean; onClose: () => void }
           Seu primeiro vídeo viral <span className="text-gradient-brand">em 3 minutos</span>
         </h2>
         <p className="text-sm text-text-muted leading-relaxed mb-6">
-          O fluxo recomendado pela equipe InfluLab. Siga na ordem para o melhor resultado.
+          O fluxo recomendado pela equipe Influencers Lab.ia. Siga na ordem para o melhor resultado.
         </p>
 
         <ol className="space-y-3">

@@ -13,7 +13,7 @@ const DISMISSED_KEY = 'influlab.blurlock-dismissed';
  * A BottomCTA continua aparecendo no rodapé enquanto não comprar.
  */
 export function BlurLock({
-  title = 'Conteúdo exclusivo para alunos InfluLab',
+  title = 'Conteúdo exclusivo para alunos Influencers Lab.ia',
   description = 'Libere o acesso completo ao laboratório e comece a criar vídeos virais para o TikTok Shop hoje mesmo.',
   ctaLabel = 'Quero liberar meu acesso',
   ctaHref = '#',

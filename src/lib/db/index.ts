@@ -108,7 +108,7 @@ async function flushToDisk() {
     state.persistenceAvailable = false;
     state.lastError = `flush: ${(err as Error).message}`;
     // eslint-disable-next-line no-console
-    console.warn('[InfluLab DB] Falha ao salvar em disco. Continuando em memória.', err);
+    console.warn('[Influencers Lab.ia DB] Falha ao salvar em disco. Continuando em memória.', err);
   }
 }
 

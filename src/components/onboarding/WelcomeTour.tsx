@@ -63,7 +63,7 @@ const slides = [
     bg: 'from-emerald-500/30 to-emerald-400/5',
     title: 'Ranking de Criadores',
     description:
-      'Veja quem mais está vendendo com a metodologia InfluLab. Inspire-se nos perfis que estão fazendo 5 ou 6 dígitos por mês.',
+      'Veja quem mais está vendendo com a metodologia Influencers Lab.ia. Inspire-se nos perfis que estão fazendo 5 ou 6 dígitos por mês.',
     bullets: ['Top criadores do mês', 'Acesso aos perfis', 'Inspiração diária'],
   },
   {

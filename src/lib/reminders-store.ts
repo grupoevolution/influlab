@@ -95,7 +95,7 @@ export async function fireReminder(r: Reminder) {
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) {
-      reg.showNotification('InfluLab ⚡', {
+      reg.showNotification('Influencers Lab.ia ⚡', {
         body: r.label,
         icon: '/icon.svg',
         badge: '/icon.svg',
@@ -108,7 +108,7 @@ export async function fireReminder(r: Reminder) {
     // ignora
   }
 
-  new Notification('InfluLab ⚡', {
+  new Notification('Influencers Lab.ia ⚡', {
     body: r.label,
     icon: '/icon.svg',
   });

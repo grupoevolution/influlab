@@ -37,7 +37,7 @@ export default function AjudaPage() {
       <PageHeader
         eyebrow="Central de ajuda"
         title="Como podemos ajudar?"
-        description="Tutoriais, FAQ e suporte direto com a equipe InfluLab."
+        description="Tutoriais, FAQ e suporte direto com a equipe Influencers Lab.ia."
       />
 
       <section className="px-4 md:px-8 py-8 max-w-7xl mx-auto">
@@ -46,7 +46,7 @@ export default function AjudaPage() {
           <HelpCard
             icon={PlayCircle}
             title="Tutorial em vídeo"
-            description="Como usar o InfluLab do zero ao primeiro vídeo viral."
+            description="Como usar o Influencers Lab.ia do zero ao primeiro vídeo viral."
             onClick={() => setOpenModal('video')}
           />
 
@@ -229,7 +229,7 @@ function GuideModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           Seu primeiro vídeo viral <span className="text-gradient-brand">em 3 minutos</span>
         </h2>
         <p className="text-sm text-text-muted leading-relaxed mb-6">
-          O fluxo recomendado pela equipe InfluLab. Siga na ordem para o melhor resultado.
+          O fluxo recomendado pela equipe Influencers Lab.ia. Siga na ordem para o melhor resultado.
         </p>
 
         <ol className="space-y-3">

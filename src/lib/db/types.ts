@@ -184,9 +184,9 @@ export type PlatformProductMapping = {
  * Tudo opcional — front sempre usa fallback se faltar.
  */
 export type SiteSettings = {
-  /** URL pra onde o link "Conheça o InfluLab" da tela de login leva (página de venda). */
+  /** URL pra onde o link "Conheça o Influencers Lab.ia" da tela de login leva (página de venda). */
   purchaseUrl?: string;
-  /** Texto do botão/link (default: "Conheça o InfluLab"). */
+  /** Texto do botão/link (default: "Conheça o Influencers Lab.ia"). */
   purchaseLabel?: string;
   /** Texto explicativo abaixo do form de login. */
   loginHelperText?: string;

@@ -45,7 +45,7 @@ export default function ConfiguracoesPage() {
               >
                 <Moon size={18} className="mb-2 text-brand-violet-300" />
                 <p className="text-sm font-semibold">Escuro</p>
-                <p className="text-[11px] text-text-muted">Padrão InfluLab</p>
+                <p className="text-[11px] text-text-muted">Padrão Influencers Lab.ia</p>
               </button>
               <button
                 onClick={() => setTheme('light')}

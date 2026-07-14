@@ -141,7 +141,7 @@ export function seedIfEmpty(db: Schema): Schema {
   if (db.announcements.length === 0) {
     db.announcements = [
       {
-        id: 'an-001', emoji: '🚀', title: 'Bem-vindo ao InfluLab!',
+        id: 'an-001', emoji: '🚀', title: 'Bem-vindo ao Influencers Lab.ia!',
         message: 'Comece pela aba Produtos Campeões e crie seu primeiro vídeo hoje.',
         ctaLabel: 'Ver produtos', ctaHref: '/app/produtos-campeoes',
         active: true, createdAt: now,

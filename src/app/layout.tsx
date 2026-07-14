@@ -19,14 +19,14 @@ const space = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'InfluLab — Laboratório de Criação para TikTok Shop',
+  title: 'Influencers Lab.ia — Laboratório de Criação para TikTok Shop',
   description:
-    'Acelere suas vendas no TikTok Shop com produtos campeões, prompts validados e modelos virais. Sistema exclusivo para alunos InfluLab.',
-  applicationName: 'InfluLab',
+    'Acelere suas vendas no TikTok Shop com produtos campeões, prompts validados e modelos virais. Sistema exclusivo para alunos Influencers Lab.ia.',
+  applicationName: 'Influencers Lab.ia',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'InfluLab',
+    title: 'Influencers Lab.ia',
   },
   manifest: '/manifest.json',
   icons: {
@@ -38,10 +38,10 @@ export const metadata: Metadata = {
     shortcut: '/icon-192.png',
   },
   openGraph: {
-    title: 'InfluLab',
+    title: 'Influencers Lab.ia',
     description: 'O laboratório de criação para vendas no TikTok Shop.',
     type: 'website',
-    siteName: 'InfluLab',
+    siteName: 'Influencers Lab.ia',
     images: [{ url: '/icon-1024.png', width: 1024, height: 1024 }],
   },
 };

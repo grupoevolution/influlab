@@ -174,7 +174,7 @@ function PlatformCard({
       {/* Mapeamentos */}
       <div className="pt-4 border-t border-border-subtle">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-300 mb-2">
-          Produtos da {platformLabel} → Planos InfluLab
+          Produtos da {platformLabel} → Planos Influencers Lab.ia
         </p>
         <div className="text-xs text-text-muted leading-relaxed mb-3 space-y-1">
           <p>

@@ -7,7 +7,7 @@ interface LogoProps {
 }
 
 /**
- * Logo InfluLab — versão vetorial inspirada na logo original (chip + erlenmeyer).
+ * Logo Influencers Lab.ia — versão vetorial inspirada na logo original (chip + erlenmeyer).
  * Para usar a logo bitmap original, coloque o arquivo em /public/logo.png
  * e troque este componente por <Image src="/logo.png" />.
  */
@@ -91,8 +91,8 @@ export function Logo({ className, showText = true, size = 'md' }: LogoProps) {
       </div>
 
       {showText && (
-        <span className={cn('font-display font-bold tracking-tight text-gradient-brand', s.text)}>
-          InfluLab
+        <span className={cn('font-display font-bold tracking-tight text-gradient-brand whitespace-nowrap', s.text)}>
+          Influencers Lab.ia
         </span>
       )}
     </div>

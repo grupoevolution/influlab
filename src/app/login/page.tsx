@@ -10,9 +10,9 @@ import { CircuitDecor } from '@/components/brand/CircuitDecor';
 import { Button } from '@/components/ui/Button';
 import type { SiteSettings } from '@/lib/db/types';
 
-const DEFAULT_LABEL = 'Conheça o InfluLab';
+const DEFAULT_LABEL = 'Conheça o Influencers Lab.ia';
 const DEFAULT_HELPER =
-  'Seu acesso é validado automaticamente pelo email da compra. Ainda não tem acesso? Conheça o InfluLab no link abaixo.';
+  'Seu acesso é validado automaticamente pelo email da compra. Ainda não tem acesso? Conheça o Influencers Lab.ia no link abaixo.';
 
 export default function LoginPage() {
   const router = useRouter();

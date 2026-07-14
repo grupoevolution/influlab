@@ -1,4 +1,4 @@
-// Service Worker do PWA InfluLab.
+// Service Worker do PWA Influencers Lab.ia.
 // Estratégia:
 //   - APIs (/api/*) e Next.js data (_next/data): SEMPRE rede, nunca cache.
 //   - HTML navegado: network-first com fallback offline.
@@ -95,7 +95,7 @@ self.addEventListener('push', (event) => {
   if (!event.data) return;
   const data = event.data.json();
   event.waitUntil(
-    self.registration.showNotification(data.title || 'InfluLab', {
+    self.registration.showNotification(data.title || 'Influencers Lab.ia', {
       body: data.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',

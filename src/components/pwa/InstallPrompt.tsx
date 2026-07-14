@@ -121,7 +121,7 @@ export function InstallPrompt() {
               <div className="flex items-start gap-3 mb-3">
                 <Logo size="sm" showText={false} />
                 <div className="flex-1 pr-6">
-                  <h4 className="font-display font-bold text-sm">Instale o InfluLab</h4>
+                  <h4 className="font-display font-bold text-sm">Instale o Influencers Lab.ia</h4>
                   <p className="text-xs text-text-muted leading-relaxed mt-0.5">
                     Acesso mais rápido, notificações de novos produtos campeões e experiência de app nativo.
                   </p>
@@ -202,7 +202,7 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
                     Adicione à <span className="text-gradient-brand">Tela de Início</span>
                   </h3>
                   <p className="text-sm text-text-muted mt-1">
-                    No iPhone, leva 3 segundos. Você terá o InfluLab como app nativo.
+                    No iPhone, leva 3 segundos. Você terá o Influencers Lab.ia como app nativo.
                   </p>
                 </div>
               </div>
@@ -234,7 +234,7 @@ function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void
                   <div className="shrink-0 h-8 w-8 rounded-xl bg-gradient-brand-soft border border-brand-violet-400/40 flex items-center justify-center text-sm font-bold text-brand-violet-200">3</div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-text-primary">Toque em <strong>Adicionar</strong> no canto superior direito</p>
-                    <p className="text-xs text-text-muted mt-0.5">Pronto! O ícone do InfluLab aparece na sua tela de início.</p>
+                    <p className="text-xs text-text-muted mt-0.5">Pronto! O ícone do Influencers Lab.ia aparece na sua tela de início.</p>
                   </div>
                   <div className="shrink-0 h-10 w-10 rounded-xl bg-gradient-brand flex items-center justify-center">
                     <ChevronRight size={18} className="text-white" />

@@ -56,7 +56,7 @@ export default function CriadoresPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Alunos InfluLab"
+        eyebrow="Alunos Influencers Lab.ia"
         title={
           <>
             Top <span className="text-gradient-brand">Criadores</span>

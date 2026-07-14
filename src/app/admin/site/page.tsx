@@ -7,9 +7,9 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import type { SiteSettings } from '@/lib/db/types';
 
-const DEFAULT_LABEL = 'Conheça o InfluLab';
+const DEFAULT_LABEL = 'Conheça o Influencers Lab.ia';
 const DEFAULT_HELPER =
-  'Seu acesso é validado automaticamente pelo email da compra. Ainda não tem acesso? Conheça o InfluLab no link abaixo.';
+  'Seu acesso é validado automaticamente pelo email da compra. Ainda não tem acesso? Conheça o Influencers Lab.ia no link abaixo.';
 const DEFAULT_UPGRADE_TITLE = 'Vire PRO e desbloqueie tudo';
 const DEFAULT_UPGRADE_DESCRIPTION =
   'Acesse os produtos premium com maior comissão e ticket alto. Esses são os produtos que os top criadores estão usando para faturar 5-6 dígitos.';
