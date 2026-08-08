@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useHeroGallery } from '@/lib/api/client';
+import { LazyVideo } from '@/components/ui/LazyVideo';
 
 /**
  * Carrossel de vídeos 9:16 que roda atrás do hero da home do aluno.
@@ -61,14 +62,9 @@ export function HeroCarousel() {
             key={`${item.id}-${i}`}
             className="relative shrink-0 w-[150px] md:w-[180px] aspect-[9/16] rounded-[18px] overflow-hidden shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
           >
-            <video
+            <LazyVideo
               src={item.videoUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-brand-violet-500/20" />
           </div>

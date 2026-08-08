@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { LazyVideo } from '@/components/ui/LazyVideo';
 import { useVideoPrompts } from '@/lib/api/client';
 import { cn, formatNumber } from '@/lib/utils';
 
@@ -76,17 +77,12 @@ export default function BancoVideosPage() {
                 >
                   <Card variant="glass" hoverable className="overflow-hidden">
                     <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">
-                      <video
+                      <LazyVideo
                         src={v.videoUrl}
                         poster={v.thumb}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        className="absolute inset-0 h-full w-full object-cover"
+                        className="absolute inset-0"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-transparent to-transparent pointer-events-none" />
 
                       <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1">
                         {v.category && (

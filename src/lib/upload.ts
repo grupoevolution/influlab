@@ -84,3 +84,14 @@ export async function readMedia(filename: string): Promise<Buffer | null> {
     return null;
   }
 }
+
+/**
+ * Resolve o caminho seguro de um arquivo de mídia (sem path traversal).
+ * Retorna null se o nome tentar sair da pasta. Usado pelo streaming de vídeo,
+ * que lê o arquivo em pedaços (Range) em vez de carregar tudo na RAM.
+ */
+export function resolveMediaPath(filename: string): string | null {
+  const safe = path.basename(filename);
+  if (safe !== filename) return null;
+  return path.join(UPLOAD_DIR, safe);
+}

@@ -12,11 +12,64 @@ async function requireAdmin() {
   return { ok: true as const, session: s };
 }
 
-export async function GET() {
+/**
+ * GET paginado + busca server-side.
+ *
+ * Por que isso importa (escala): a base tem ~20 mil emails. Antes, este endpoint
+ * devolvia TODOS de uma vez e a página renderizava 20k linhas — travava o
+ * navegador do admin. Agora devolve só uma página (padrão 50) + as contagens
+ * totais, e a busca/filtro é feita no servidor.
+ *
+ * Query params:
+ *  - q      : filtra por email (substring)
+ *  - plan   : 'basic' | 'pro' (filtra)
+ *  - page   : página (1-based)
+ *  - limit  : itens por página (máx 200)
+ */
+export async function GET(req: Request) {
   const ac = await requireAdmin();
   if (!ac.ok) return NextResponse.json({ error: 'no auth' }, { status: ac.status });
   const db = await getDB();
-  return NextResponse.json({ data: db.whitelist });
+  const all = db.whitelist ?? [];
+
+  const url = new URL(req.url);
+  const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+  const planFilter = url.searchParams.get('plan');
+  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') ?? '50', 10) || 50));
+
+  // Stats sempre calculados sobre a base inteira (é só contar — barato)
+  let basic = 0;
+  let pro = 0;
+  for (const w of all) {
+    if (w.plan === 'pro') pro++;
+    else basic++;
+  }
+  const stats = { total: all.length, basic, pro };
+
+  // Filtra
+  let filtered = all;
+  if (planFilter === 'basic' || planFilter === 'pro') {
+    filtered = filtered.filter((w) => w.plan === planFilter);
+  }
+  if (q) {
+    filtered = filtered.filter((w) => w.email.includes(q));
+  }
+
+  const totalFiltered = filtered.length;
+  const startIdx = (page - 1) * limit;
+  const pageItems = filtered.slice(startIdx, startIdx + limit);
+
+  return NextResponse.json({
+    data: pageItems,
+    stats,
+    pagination: {
+      page,
+      limit,
+      totalFiltered,
+      totalPages: Math.max(1, Math.ceil(totalFiltered / limit)),
+    },
+  });
 }
 
 export async function POST(req: Request) {

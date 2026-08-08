@@ -7,6 +7,7 @@ import { MediaUpload } from '@/components/admin/MediaUpload';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { LazyVideo } from '@/components/ui/LazyVideo';
 import { Modal } from '@/components/ui/Modal';
 import type { HeroGalleryItem } from '@/lib/db/types';
 
@@ -135,14 +136,9 @@ export default function AdminGaleriaPage() {
             {items.map((item, i) => (
               <Card key={item.id} variant="glass" className="overflow-hidden p-0">
                 <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">
-                  <video
+                  <LazyVideo
                     src={item.videoUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0"
                   />
                   <Badge variant="cyan" className="absolute top-2 left-2 text-[10px]">
                     #{i + 1}

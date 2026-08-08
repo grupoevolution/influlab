@@ -6,6 +6,7 @@ import { ArrowRight, Calendar, Crown, Flame, Megaphone, Radio, Sparkles, Trendin
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { LazyVideo } from '@/components/ui/LazyVideo';
 import { useAnnouncement, useProducts, useUpcomingEvents, useVirals } from '@/lib/api/client';
 import type { UpcomingEventDB } from '@/lib/db/types';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -222,16 +223,12 @@ export function TrendingNow() {
               <Link href="/app/virais" className="block group">
                 <Card variant="glass" hoverable className="overflow-hidden">
                   <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">
-                    <video
+                    <LazyVideo
                       src={v.videoUrl}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="auto"
-                      className="absolute inset-0 h-full w-full object-cover"
+                      poster={v.thumb}
+                      className="absolute inset-0"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-bg-card/70 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-bg-card/70 to-transparent pointer-events-none" />
 
                     <div className="absolute top-2 left-2">
                       <Badge variant="live" className="text-[9px] px-1.5 py-0">

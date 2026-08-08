@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ViralModal } from '@/components/virais/ViralModal';
+import { LazyVideo } from '@/components/ui/LazyVideo';
 import { useVirals } from '@/lib/api/client';
 import type { ViralVideoDB as ViralVideo } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
@@ -73,17 +74,12 @@ export default function ViraisPage() {
               >
                 <Card variant="glass" hoverable className="overflow-hidden">
                   <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">
-                    <video
+                    <LazyVideo
                       src={v.videoUrl}
                       poster={v.thumb}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                      className="absolute inset-0 h-full w-full object-cover"
+                      className="absolute inset-0"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/20 to-transparent pointer-events-none" />
 
                     <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
                       <Badge variant="live" className="px-2 py-0.5 text-[10px]">

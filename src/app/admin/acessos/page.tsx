@@ -1,7 +1,7 @@
 'use client';
 
-import { Check, Crown, Edit3, FileSpreadsheet, History, Mail, Plus, Search, Trash2, Upload, UserCheck, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Crown, Edit3, FileSpreadsheet, History, Loader2, Mail, Plus, Search, Trash2, Upload, UserCheck, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,30 +10,68 @@ import { Modal } from '@/components/ui/Modal';
 import type { Plan, WhitelistEntry } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 
+const PAGE_SIZE = 50;
+
+type Stats = { total: number; basic: number; pro: number };
+type Pagination = { page: number; limit: number; totalFiltered: number; totalPages: number };
+
 export default function AdminAcessosPage() {
   const [items, setItems] = useState<WhitelistEntry[]>([]);
+  const [stats, setStats] = useState<Stats>({ total: 0, basic: 0, pro: 0 });
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: PAGE_SIZE, totalFiltered: 0, totalPages: 1 });
+
   const [email, setEmail] = useState('');
   const [plan, setPlan] = useState<Plan>('basic');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filterPlan, setFilterPlan] = useState<'all' | Plan>('all');
-  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const [adding, setAdding] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
   const [recoverOpen, setRecoverOpen] = useState(false);
 
-  const load = async () => {
-    const r = await fetch('/api/admin/whitelist', { cache: 'no-store' });
-    const j = await r.json();
-    setItems(j.data ?? []);
-  };
+  // Debounce da busca: só busca no servidor 350ms depois de parar de digitar
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedQuery(query.trim().toLowerCase());
+      setPage(1); // nova busca sempre volta pra página 1
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Volta pra página 1 quando muda o filtro de plano
+  useEffect(() => {
+    setPage(1);
+  }, [filterPlan]);
+
+  const load = useCallback(async () => {
+    setListLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(PAGE_SIZE));
+      if (debouncedQuery) params.set('q', debouncedQuery);
+      if (filterPlan !== 'all') params.set('plan', filterPlan);
+      const r = await fetch(`/api/admin/whitelist?${params.toString()}`, { cache: 'no-store' });
+      const j = await r.json();
+      setItems(j.data ?? []);
+      if (j.stats) setStats(j.stats);
+      if (j.pagination) setPagination(j.pagination);
+    } finally {
+      setListLoading(false);
+    }
+  }, [page, debouncedQuery, filterPlan]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) return;
-    setLoading(true);
+    setAdding(true);
     try {
       await fetch('/api/admin/whitelist', {
         method: 'POST',
@@ -43,7 +81,7 @@ export default function AdminAcessosPage() {
       setEmail('');
       load();
     } finally {
-      setLoading(false);
+      setAdding(false);
     }
   };
 
@@ -72,7 +110,7 @@ export default function AdminAcessosPage() {
       alert('Email inválido');
       return false;
     }
-    if (ne === oldEmail) return true; // nada a fazer
+    if (ne === oldEmail) return true;
     const r = await fetch('/api/admin/whitelist', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -87,21 +125,8 @@ export default function AdminAcessosPage() {
     return true;
   };
 
-  const filtered = useMemo(
-    () =>
-      items.filter((i) => {
-        if (filterPlan !== 'all' && i.plan !== filterPlan) return false;
-        if (query && !i.email.includes(query.toLowerCase())) return false;
-        return true;
-      }),
-    [items, query, filterPlan],
-  );
-
-  const stats = useMemo(() => {
-    const basic = items.filter((i) => i.plan === 'basic').length;
-    const pro = items.filter((i) => i.plan === 'pro').length;
-    return { basic, pro, total: items.length };
-  }, [items]);
+  const rangeStart = pagination.totalFiltered === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const rangeEnd = Math.min(pagination.page * pagination.limit, pagination.totalFiltered);
 
   return (
     <>
@@ -121,19 +146,19 @@ export default function AdminAcessosPage() {
       />
 
       <section className="px-4 md:px-8 py-6 max-w-4xl mx-auto space-y-5">
-        {/* Stats */}
+        {/* Stats — sempre sobre a base inteira */}
         <div className="grid grid-cols-3 gap-2">
           <Card variant="glass" className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-widest text-text-muted">Total</p>
-            <p className="text-2xl font-display font-bold">{stats.total}</p>
+            <p className="text-2xl font-display font-bold">{stats.total.toLocaleString('pt-BR')}</p>
           </Card>
           <Card variant="glass" className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-widest text-brand-cyan-300">Básico</p>
-            <p className="text-2xl font-display font-bold text-brand-cyan-300">{stats.basic}</p>
+            <p className="text-2xl font-display font-bold text-brand-cyan-300">{stats.basic.toLocaleString('pt-BR')}</p>
           </Card>
           <Card variant="glass" className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-widest text-amber-300">PRO</p>
-            <p className="text-2xl font-display font-bold text-amber-300">{stats.pro}</p>
+            <p className="text-2xl font-display font-bold text-amber-300">{stats.pro.toLocaleString('pt-BR')}</p>
           </Card>
         </div>
 
@@ -160,14 +185,14 @@ export default function AdminAcessosPage() {
                 <option value="basic">Básico</option>
                 <option value="pro">PRO</option>
               </select>
-              <Button type="submit" loading={loading} leftIcon={<Plus size={14} />}>
+              <Button type="submit" loading={adding} leftIcon={<Plus size={14} />}>
                 Liberar
               </Button>
             </div>
           </form>
         </Card>
 
-        {/* Filtros */}
+        {/* Filtros + busca */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex gap-1.5">
             {(['all', 'basic', 'pro'] as const).map((p) => (
@@ -185,23 +210,39 @@ export default function AdminAcessosPage() {
               </button>
             ))}
           </div>
-          <div className="relative w-48">
+          <div className="relative w-56">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filtrar email..."
+              placeholder="Buscar email na base toda..."
               className="w-full h-8 pl-7 pr-2 rounded-lg bg-bg-elevated border border-border text-xs"
             />
           </div>
         </div>
 
+        {/* Contador de resultados */}
+        <div className="flex items-center justify-between text-[11px] text-text-muted">
+          <span>
+            {pagination.totalFiltered === 0
+              ? 'Nenhum resultado'
+              : `Mostrando ${rangeStart}–${rangeEnd} de ${pagination.totalFiltered.toLocaleString('pt-BR')}${
+                  debouncedQuery || filterPlan !== 'all' ? ' (filtrado)' : ''
+                }`}
+          </span>
+          {listLoading && (
+            <span className="inline-flex items-center gap-1">
+              <Loader2 size={11} className="animate-spin" /> carregando
+            </span>
+          )}
+        </div>
+
         {/* Lista */}
-        <Card variant="glass" className="divide-y divide-border-subtle">
-          {filtered.length === 0 && (
+        <Card variant="glass" className="divide-y divide-border-subtle min-h-[120px]">
+          {!listLoading && items.length === 0 && (
             <div className="p-6 text-sm text-text-muted text-center">Nenhum email encontrado.</div>
           )}
-          {filtered.map((w) => (
+          {items.map((w) => (
             <WhitelistRow
               key={w.email}
               entry={w}
@@ -211,6 +252,33 @@ export default function AdminAcessosPage() {
             />
           ))}
         </Card>
+
+        {/* Paginação */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3">
+            <Button
+              size="sm"
+              variant="secondary"
+              leftIcon={<ChevronLeft size={14} />}
+              disabled={pagination.page <= 1 || listLoading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <span className="text-xs text-text-muted whitespace-nowrap">
+              Página {pagination.page} de {pagination.totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              rightIcon={<ChevronRight size={14} />}
+              disabled={pagination.page >= pagination.totalPages || listLoading}
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+            >
+              Próxima
+            </Button>
+          </div>
+        )}
       </section>
 
       <ImportCsvModal open={importOpen} onClose={() => setImportOpen(false)} onDone={load} />
