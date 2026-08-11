@@ -256,10 +256,18 @@ export async function getEmailAccess(
   if (envAllowedPro.includes(e)) return { allowed: true, plan: 'pro' };
 
   // Garante migração feita, depois lookup O(1) no SQLite (chave primária)
-  await getDB();
-  const entry = wlGet(e);
-  if (!entry) return { allowed: false, plan: null };
-  return { allowed: true, plan: entry.plan };
+  const db = await getDB();
+  try {
+    const entry = wlGet(e);
+    if (!entry) return { allowed: false, plan: null };
+    return { allowed: true, plan: entry.plan };
+  } catch {
+    // Contingência: driver SQLite indisponível → busca no JSON antigo
+    // (nesse cenário a migração nunca rodou, então os dados seguem lá).
+    const entry = db.whitelist.find((w) => w.email.trim().toLowerCase() === e);
+    if (!entry) return { allowed: false, plan: null };
+    return { allowed: true, plan: entry.plan };
+  }
 }
 
 export async function getActiveAnnouncement() {
@@ -274,6 +282,15 @@ export function isPersistenceAvailable(): boolean {
 export function getDiagnostic() {
   return {
     persistenceAvailable: state.persistenceAvailable,
+    sqlite: (() => {
+      try {
+        const { sqliteStatus } = require('./sqlite') as typeof import('./sqlite');
+        const s = sqliteStatus();
+        return s.loaded ? 'ok' : `off${s.error ? `: ${s.error}` : ''}`;
+      } catch {
+        return 'off';
+      }
+    })(),
     cacheLoaded: !!state.cache,
     dataDir: DATA_DIR,
     dbFile: DB_FILE,

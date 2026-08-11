@@ -1,7 +1,9 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import Database from 'better-sqlite3';
+import type DatabaseNS from 'better-sqlite3';
 import type { AccessLogEntry, Plan, WhitelistEntry } from './types';
+
+type SqliteDB = DatabaseNS.Database;
 
 /**
  * ===== Banco SQLite para os dados QUENTES e GRANDES =====
@@ -26,17 +28,47 @@ import type { AccessLogEntry, Plan, WhitelistEntry } from './types';
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const SQLITE_FILE = path.join(DATA_DIR, 'app.db');
 
-type SqlGlobal = { db: Database.Database | null };
+type SqlGlobal = { db: SqliteDB | null; driverError: string | null };
 const g = globalThis as unknown as { __INFLULAB_SQLITE__?: SqlGlobal };
-if (!g.__INFLULAB_SQLITE__) g.__INFLULAB_SQLITE__ = { db: null };
+if (!g.__INFLULAB_SQLITE__) g.__INFLULAB_SQLITE__ = { db: null, driverError: null };
 const holder = g.__INFLULAB_SQLITE__!;
 
 const LOG_CAP = 5000;
 
-function getSqlite(): Database.Database {
+/**
+ * Carrega o driver nativo sob demanda e À PROVA DE FALHA.
+ * Se o binário do better-sqlite3 não funcionar no ambiente (ex: build errado
+ * pra Alpine/musl), NÃO derruba o servidor: registra o erro e o db/index.ts
+ * cai automaticamente pro modo JSON antigo. O status fica visível em
+ * /api/health e /api/admin/diag.
+ */
+function loadDriver(): typeof DatabaseNS | null {
+  if (holder.driverError) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Driver = require('better-sqlite3') as typeof DatabaseNS;
+    return Driver;
+  } catch (err) {
+    holder.driverError = (err as Error)?.message ?? String(err);
+    // eslint-disable-next-line no-console
+    console.error('[SQLITE] Driver better-sqlite3 indisponível — contingência em modo JSON.', err);
+    return null;
+  }
+}
+
+/** Status pro /api/health e /api/admin/diag. */
+export function sqliteStatus(): { loaded: boolean; error: string | null } {
+  return { loaded: !!holder.db, error: holder.driverError };
+}
+
+function getSqlite(): SqliteDB {
   if (holder.db) return holder.db;
+  const Driver = loadDriver();
+  if (!Driver) {
+    throw new Error(`sqlite driver indisponível: ${holder.driverError ?? 'motivo desconhecido'}`);
+  }
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const db = new Database(SQLITE_FILE);
+  const db = new Driver(SQLITE_FILE);
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
   db.exec(`
