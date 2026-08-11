@@ -61,7 +61,10 @@ export function CircuitDecor({ className }: { className?: string }) {
           r="3"
           fill="#22D3EE"
           initial={{ opacity: 0.3 }}
-          animate={{ opacity: [0.3, 1, 0.3], r: [3, 5, 3] }}
+          // Anima só opacity: animar o atributo `r` via framer-motion escrevia
+          // "undefined" em alguns frames (erro infinito no console) e gastava
+          // thread principal à toa.
+          animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
         />
       ))}

@@ -1,7 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Eye, Flame } from 'lucide-react';
+import { Eye, Flame, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -9,9 +8,15 @@ import { Badge } from '@/components/ui/Badge';
 import { ViralModal } from '@/components/virais/ViralModal';
 import { LazyVideo } from '@/components/ui/LazyVideo';
 import { useVirals } from '@/lib/api/client';
+import { useIncremental } from '@/lib/use-incremental';
 import type { ViralVideoDB as ViralVideo } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 
+/**
+ * NOTA DE PERFORMANCE (não reverter sem medir):
+ * Grid sem backdrop-filter sobre vídeo, sem animação JS por card e com
+ * renderização incremental — ver comentário em banco-videos/page.tsx.
+ */
 export default function ViraisPage() {
   const [active, setActive] = useState('Todos');
   const [selected, setSelected] = useState<ViralVideo | null>(null);
@@ -27,6 +32,8 @@ export default function ViraisPage() {
     () => (active === 'Todos' ? viralVideos : viralVideos.filter((v) => v.category === active)),
     [viralVideos, active],
   );
+
+  const { visible, sentinelRef, hasMore } = useIncremental(filtered, 12, active);
 
   return (
     <>
@@ -63,16 +70,13 @@ export default function ViraisPage() {
       <section className="px-3 md:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid gap-3 md:gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filtered.map((v, i) => (
-              <motion.button
+            {visible.map((v) => (
+              <button
                 key={v.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.04 }}
                 onClick={() => setSelected(v)}
                 className="block text-left group"
               >
-                <Card variant="glass" hoverable className="overflow-hidden">
+                <Card variant="default" hoverable className="overflow-hidden">
                   <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">
                     <LazyVideo
                       src={v.videoUrl}
@@ -81,19 +85,19 @@ export default function ViraisPage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/20 to-transparent pointer-events-none" />
 
-                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                       <Badge variant="live" className="px-2 py-0.5 text-[10px]">
                         <Flame size={9} /> Viral
                       </Badge>
                       {v.views && (
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full glass-strong text-[10px] font-medium">
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/60 border border-white/10 text-[10px] font-medium">
                           <Eye size={9} />
                           <span>{v.views}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="absolute bottom-0 inset-x-0 p-3">
+                    <div className="absolute bottom-0 inset-x-0 p-3 pointer-events-none">
                       {v.category && (
                         <Badge variant="brand" className="mb-1.5 text-[10px]">{v.category}</Badge>
                       )}
@@ -103,9 +107,16 @@ export default function ViraisPage() {
                     </div>
                   </div>
                 </Card>
-              </motion.button>
+              </button>
             ))}
           </div>
+
+          {hasMore && (
+            <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-8 text-text-muted text-xs">
+              <Loader2 size={14} className="animate-spin" />
+              Carregando mais...
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-16 text-text-muted text-sm">

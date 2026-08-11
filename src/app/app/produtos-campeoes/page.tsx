@@ -1,7 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Crown, Flame, Sparkles } from 'lucide-react';
+import { Crown, Flame, Loader2, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -11,6 +10,7 @@ import { LockedProductCard } from '@/components/products/LockedProductCard';
 import { UpgradeProModal } from '@/components/products/UpgradeProModal';
 import { useProducts } from '@/lib/api/client';
 import { useStudentSession } from '@/lib/student-session';
+import { useIncremental } from '@/lib/use-incremental';
 import type { AdProduct } from '@/lib/db/types';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -72,6 +72,9 @@ export default function ProdutosCampeoesPage() {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   }, [sort, period, niche, products]);
+
+  // Renderização incremental: 12 cards por vez (ver src/lib/use-incremental.ts)
+  const { visible, sentinelRef, hasMore } = useIncremental(filtered, 12, `${sort}|${period}|${niche}`);
 
   const handleProductClick = (p: AdProduct) => {
     if (p.plan === 'pro' && !isPro) {
@@ -162,7 +165,7 @@ export default function ProdutosCampeoesPage() {
       <section className="px-3 md:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid gap-3 md:gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {filtered.map((product, i) => {
+            {visible.map((product, i) => {
               const isLocked = product.plan === 'pro' && !isPro;
 
               if (isLocked) {
@@ -171,34 +174,32 @@ export default function ProdutosCampeoesPage() {
                     key={product.id}
                     product={product}
                     onClick={() => setUpgradeOpen(true)}
-                    delay={i * 0.04}
+                    delay={0}
                   />
                 );
               }
 
-              // Ranking calculado: posição dele na lista ATUAL (já ordenada por receita)
+              // Ranking calculado: posição dele na lista ATUAL (visible é prefixo
+              // da filtered ordenada, então i + 1 continua sendo o rank global)
               const rankingPosition = i + 1;
               const img = product.image || product.coverImage;
 
               return (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: i * 0.04 }}
-                >
+                <div key={product.id}>
                   <button onClick={() => handleProductClick(product)} className="block w-full text-left group">
-                    <Card variant="glass" hoverable className="overflow-hidden">
+                    <Card variant="default" hoverable className="overflow-hidden">
                       <div className="relative aspect-[4/5] overflow-hidden bg-bg-elevated">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={img}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/20 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/20 to-transparent pointer-events-none" />
 
-                        <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full glass-strong text-[10px]">
+                        <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 border border-white/10 text-[10px]">
                           <Crown size={10} className="text-amber-300" />
                           <span className="font-bold">#{rankingPosition}</span>
                         </div>
@@ -230,10 +231,17 @@ export default function ProdutosCampeoesPage() {
                       </div>
                     </Card>
                   </button>
-                </motion.div>
+                </div>
               );
             })}
           </div>
+
+          {hasMore && (
+            <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-8 text-text-muted text-xs">
+              <Loader2 size={14} className="animate-spin" />
+              Carregando mais...
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-20 text-text-muted">

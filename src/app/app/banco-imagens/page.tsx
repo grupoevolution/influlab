@@ -1,15 +1,23 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useImagePrompts } from '@/lib/api/client';
+import { useIncremental } from '@/lib/use-incremental';
 import { cn } from '@/lib/utils';
 
+/**
+ * NOTA DE PERFORMANCE (não reverter sem medir):
+ * Esta página travava mesmo sem vídeos. Causas: dezenas de cards com
+ * backdrop-filter (glass), animação JS por card na montagem e todas as
+ * imagens grandes decodificando de uma vez. Correções: Card sólido,
+ * sem motion por card, useIncremental (12 por vez) e loading="lazy" +
+ * decoding="async" nas imagens.
+ */
 export default function BancoImagensPage() {
   const [active, setActive] = useState('Todos');
   const { data: imagePrompts } = useImagePrompts();
@@ -24,6 +32,8 @@ export default function BancoImagensPage() {
     () => (active === 'Todos' ? imagePrompts : imagePrompts.filter((i) => i.category === active)),
     [imagePrompts, active],
   );
+
+  const { visible, sentinelRef, hasMore } = useIncremental(filtered, 12, active);
 
   return (
     <>
@@ -62,22 +72,19 @@ export default function BancoImagensPage() {
       <section className="px-3 md:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid gap-3 md:gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {filtered.map((img, i) => (
-              <motion.div
-                key={img.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.04 }}
-              >
-                <Card variant="glass" hoverable className="overflow-hidden">
+            {visible.map((img) => (
+              <div key={img.id}>
+                <Card variant="default" hoverable className="overflow-hidden">
                   <div className="relative aspect-square overflow-hidden bg-bg-elevated">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={img.image}
                       alt={img.title}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
-                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1">
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1 pointer-events-none">
                       {img.category && <Badge variant="cyan" className="text-[10px] px-1.5 py-0">{img.category}</Badge>}
                       {img.style && <Badge variant="brand" className="text-[10px] px-1.5 py-0">{img.style}</Badge>}
                     </div>
@@ -87,7 +94,7 @@ export default function BancoImagensPage() {
                       download
                       target="_blank"
                       rel="noreferrer"
-                      className="absolute bottom-2 right-2 p-1.5 rounded-lg glass-strong text-text-primary hover:bg-bg-card"
+                      className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/60 border border-white/10 text-text-primary hover:bg-bg-card"
                       title="Baixar imagem"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -116,9 +123,16 @@ export default function BancoImagensPage() {
                     </div>
                   </div>
                 </Card>
-              </motion.div>
+              </div>
             ))}
           </div>
+
+          {hasMore && (
+            <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-8 text-text-muted text-xs">
+              <Loader2 size={14} className="animate-spin" />
+              Carregando mais...
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-16 text-text-muted text-sm">
