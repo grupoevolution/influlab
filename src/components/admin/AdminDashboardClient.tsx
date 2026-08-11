@@ -83,10 +83,12 @@ export function AdminDashboardClient({ role, email }: { role: 'admin' | 'staff';
         if (isAdmin) {
           try {
             const [whitelistRes, logsRes] = await Promise.all([
-              fetch('/api/admin/whitelist', { cache: 'no-store' }),
+              // limit=1: só precisamos dos stats (total da base), não da lista
+              fetch('/api/admin/whitelist?limit=1', { cache: 'no-store' }),
               fetch('/api/admin/access-log?limit=200', { cache: 'no-store' }),
             ]);
-            whitelistCount = ((await whitelistRes.json()).data ?? []).length;
+            const wlJson = await whitelistRes.json();
+            whitelistCount = wlJson.stats?.total ?? (wlJson.data ?? []).length;
             logs = (await logsRes.json()).data ?? [];
           } catch {
             // ignora se admin-only falhar

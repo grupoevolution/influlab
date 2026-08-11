@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { getDB, logAccess, mutateDB, newId } from '@/lib/db';
+import { getDB, logAccess, newId } from '@/lib/db';
+import { wlAdd, wlDelete } from '@/lib/db/sqlite';
 import type { Plan, WhitelistEntry } from '@/lib/db/types';
 
 export const runtime = 'nodejs';
@@ -126,6 +127,7 @@ function resolvePlan(
   return found?.plan ?? null;
 }
 
+/** Adiciona/atualiza no SQLite — INSERT de 1 linha, sem reescrever arquivo nenhum. */
 async function addEmail(email: string, plan: Plan, platform: string, productRef: string) {
   const entry: WhitelistEntry = {
     email,
@@ -135,20 +137,12 @@ async function addEmail(email: string, plan: Plan, platform: string, productRef:
     productRef,
     addedAt: new Date().toISOString(),
   };
-  await mutateDB((db) => {
-    const idx = db.whitelist.findIndex((w) => w.email === email);
-    if (idx >= 0) db.whitelist[idx] = { ...db.whitelist[idx], plan, source: 'webhook', platform, productRef };
-    else db.whitelist.unshift(entry);
-  });
+  wlAdd(entry);
 }
 
 /** Retorna true se removeu, false se o email nem existia (no-op silencioso). */
 async function removeEmail(email: string): Promise<boolean> {
-  return mutateDB((db) => {
-    const before = db.whitelist.length;
-    db.whitelist = db.whitelist.filter((w) => w.email !== email);
-    return db.whitelist.length < before;
-  });
+  return wlDelete(email);
 }
 
 async function logWebhookAction(

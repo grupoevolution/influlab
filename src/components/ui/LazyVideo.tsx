@@ -68,6 +68,12 @@ export function LazyVideo({ src, poster, className, rootMargin = '100px' }: Lazy
   const videoRef = useRef<HTMLVideoElement>(null);
   const [inView, setInView] = useState(false);
 
+  // Convenção: vídeos comprimidos no upload ganham um poster automático em
+  // `<arquivo>.poster.webp`. Se o admin não subiu thumb manual, tentamos ele.
+  // (Se o arquivo não existir, o 404 é inofensivo — o card só fica sem poster.)
+  const effectivePoster =
+    poster || (src.startsWith('/api/media/') ? `${src}.poster.webp` : undefined);
+
   // Observa visibilidade
   useEffect(() => {
     const el = videoRef.current;
@@ -121,7 +127,7 @@ export function LazyVideo({ src, poster, className, rootMargin = '100px' }: Lazy
   return (
     <video
       ref={videoRef}
-      poster={poster}
+      poster={effectivePoster}
       muted
       loop
       playsInline

@@ -1,8 +1,10 @@
 # --- Build stage ----------------------------------------------------------
 FROM node:20-alpine AS deps
 WORKDIR /app
-# libc6-compat permite o sharp usar seus binários pré-compilados (linuxmusl) no Alpine
-RUN apk add --no-cache libc6-compat
+# libc6-compat: binários pré-compilados do sharp (linuxmusl)
+# python3/make/g++: fallback de compilação do better-sqlite3 caso não haja
+#                   prebuild musl pra esta versão do Node
+RUN apk add --no-cache libc6-compat python3 make g++
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
@@ -23,8 +25,9 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DATA_DIR=/app/data
 
-# libc6-compat sozinho basta — o sharp já vem com seu vips embutido (@img/sharp-libvips-linuxmusl-*)
-RUN apk add --no-cache libc6-compat
+# libc6-compat: sharp (vips embutido). ffmpeg: compressão automática de vídeo
+# no upload + geração de poster (ver src/lib/upload.ts).
+RUN apk add --no-cache libc6-compat ffmpeg
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs

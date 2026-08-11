@@ -2,6 +2,14 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Schema, SchemaKey, SchemaArrayKey } from './types';
 import { seedIfEmpty } from './seed';
+import {
+  isJsonMigrated,
+  logAdd,
+  logCount,
+  migrateFromJson,
+  wlGet,
+  wlStats,
+} from './sqlite';
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -85,6 +93,37 @@ async function initialize(): Promise<void> {
   } else {
     // Fallback: roda em memória global com seed
     state.cache = seedIfEmpty(JSON.parse(JSON.stringify(EMPTY_SCHEMA)));
+  }
+
+  // ===== Migração única: whitelist + accessLog saem do JSON e vão pro SQLite =====
+  // (ver src/lib/db/sqlite.ts). Depois de migrar, os arrays no JSON são
+  // esvaziados — assim o flush do db.json volta a ser minúsculo (só conteúdo).
+  try {
+    const cache = state.cache!;
+    if (!isJsonMigrated()) {
+      const migrated = migrateFromJson(cache.whitelist ?? [], cache.accessLog ?? []);
+      if (migrated && ((cache.whitelist?.length ?? 0) > 0 || (cache.accessLog?.length ?? 0) > 0)) {
+        // Backup do JSON original antes de esvaziar (segurança extra)
+        try {
+          await fs.copyFile(DB_FILE, DB_FILE + '.pre-sqlite.bak');
+        } catch {
+          /* sem backup possível — segue (dados já estão no SQLite) */
+        }
+        cache.whitelist = [];
+        cache.accessLog = [];
+        await flushToDisk();
+      }
+    } else if ((state.cache.whitelist?.length ?? 0) > 0 || (state.cache.accessLog?.length ?? 0) > 0) {
+      // Já migrado antes, mas o JSON ainda carrega os arrays (ex: restore antigo).
+      // Esvazia pra manter o flush leve — a fonte da verdade é o SQLite.
+      state.cache.whitelist = [];
+      state.cache.accessLog = [];
+    }
+  } catch (err) {
+    // Se o SQLite falhar por qualquer motivo, seguimos com o JSON (modo antigo).
+    state.lastError = `sqlite init: ${(err as Error).message}`;
+    // eslint-disable-next-line no-console
+    console.error('[DB] Falha ao inicializar SQLite — usando JSON como fallback.', err);
   }
 }
 
@@ -191,10 +230,14 @@ export async function deleteOne<K extends SchemaArrayKey>(key: K, id: string): P
 }
 
 export async function logAccess(entry: import('./types').AccessLogEntry) {
-  await mutateDB((db) => {
-    db.accessLog.unshift(entry);
-    if (db.accessLog.length > 1000) db.accessLog.length = 1000;
-  });
+  // Garante que a migração inicial já rodou antes de gravar
+  await getDB();
+  try {
+    logAdd(entry);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[DB] Falha ao gravar log de acesso.', err);
+  }
 }
 
 export async function isEmailWhitelisted(email: string): Promise<boolean> {
@@ -212,8 +255,9 @@ export async function getEmailAccess(
     .filter(Boolean);
   if (envAllowedPro.includes(e)) return { allowed: true, plan: 'pro' };
 
-  const db = await getDB();
-  const entry = db.whitelist.find((w) => w.email.trim().toLowerCase() === e);
+  // Garante migração feita, depois lookup O(1) no SQLite (chave primária)
+  await getDB();
+  const entry = wlGet(e);
   if (!entry) return { allowed: false, plan: null };
   return { allowed: true, plan: entry.plan };
 }
@@ -241,10 +285,26 @@ export function getDiagnostic() {
           imagePrompts: state.cache.imagePrompts.length,
           virals: state.cache.virals.length,
           creators: state.cache.creators.length,
-          whitelist: state.cache.whitelist.length,
+          whitelist: safeWlTotal(),
           announcements: state.cache.announcements.length,
-          accessLog: state.cache.accessLog.length,
+          accessLog: safeLogCount(),
         }
       : null,
   };
+}
+
+function safeWlTotal(): number {
+  try {
+    return wlStats().total;
+  } catch {
+    return state.cache?.whitelist.length ?? 0;
+  }
+}
+
+function safeLogCount(): number {
+  try {
+    return logCount();
+  } catch {
+    return state.cache?.accessLog.length ?? 0;
+  }
 }
