@@ -8,20 +8,13 @@ export const runtime = 'nodejs';
 /**
  * Serve mídia (imagem/vídeo) com suporte a HTTP Range requests.
  *
- * - Streaming por pedaços: nunca carrega o arquivo inteiro na RAM.
- * - Range → 206 Partial Content: o vídeo começa a tocar quase instantâneo.
- *
- * IMPORTANTE (correção de crash em produção): a versão anterior usava
- * Readable.toWeb(), que lança um uncaughtException fatal
- * ("Controller is already closed") quando o navegador ABORTA a requisição
- * no meio — coisa que players de vídeo fazem o tempo todo (seek, troca de
- * card, saída da página). Isso derrubava o processo Node inteiro em loop.
- * Agora convertemos o stream manualmente com TODAS as chamadas do controller
- * protegidas: abort do cliente só encerra a leitura daquele arquivo, nunca
- * derruba o servidor.
+ * ATENÇÃO — não trocar por Readable.toWeb(): essa API lança uncaughtException
+ * fatal ("Controller is already closed") quando o navegador aborta a requisição
+ * no meio (seek/troca de página — players fazem isso o tempo todo), derrubando
+ * o processo inteiro. Erro observado nos logs de produção. Aqui a conversão é
+ * manual com todas as chamadas do controller protegidas.
  */
 
-/** Converte um read-stream do Node em ReadableStream web à prova de abort. */
 function fileToWebStream(filePath: string, opts?: { start: number; end: number }): ReadableStream<Uint8Array> {
   const nodeStream = createReadStream(filePath, opts);
   return new ReadableStream<Uint8Array>({
@@ -30,12 +23,10 @@ function fileToWebStream(filePath: string, opts?: { start: number; end: number }
         const buf = chunk as Buffer;
         try {
           controller.enqueue(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-          // Backpressure: se a fila encheu (cliente lento), pausa a leitura do disco
           if (controller.desiredSize !== null && controller.desiredSize <= 0) {
             nodeStream.pause();
           }
         } catch {
-          // Cliente abortou — encerra a leitura deste arquivo e segue a vida
           nodeStream.destroy();
         }
       });
@@ -43,20 +34,19 @@ function fileToWebStream(filePath: string, opts?: { start: number; end: number }
         try {
           controller.close();
         } catch {
-          /* controller já fechado pelo abort — ok */
+          /* já fechado pelo abort */
         }
       });
       nodeStream.on('error', (err) => {
         try {
           controller.error(err);
         } catch {
-          /* controller já fechado — ok */
+          /* já fechado */
         }
         nodeStream.destroy();
       });
     },
     pull() {
-      // Cliente voltou a consumir — retoma a leitura
       nodeStream.resume();
     },
     cancel() {
@@ -89,7 +79,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ filename: strin
 
     const range = req.headers.get('range');
 
-    // Sem Range: arquivo inteiro via stream
     if (!range) {
       return new NextResponse(fileToWebStream(filePath), {
         status: 200,
@@ -97,7 +86,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ filename: strin
       });
     }
 
-    // Com Range: 206 Partial Content
     const match = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
     if (!match) {
       return new NextResponse('invalid range', {
@@ -128,7 +116,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ filename: strin
       },
     });
   } catch {
-    // Nunca deixa uma exceção desta rota virar crash de processo
     return new NextResponse('internal error', { status: 500 });
   }
 }

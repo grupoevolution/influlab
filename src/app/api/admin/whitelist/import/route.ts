@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/session';
-import { getDB, logAccess, newId } from '@/lib/db';
-import { wlImportMany } from '@/lib/db/sqlite';
+import { logAccess, mutateDB, newId } from '@/lib/db';
 import type { Plan, WhitelistEntry } from '@/lib/db/types';
 
 export const runtime = 'nodejs';
@@ -60,9 +59,13 @@ export async function POST(req: Request) {
     });
   }
 
-  // Import em massa direto no SQLite (transação única — rápido mesmo com milhares)
-  await getDB();
-  wlImportMany(entries);
+  await mutateDB((db) => {
+    for (const entry of entries) {
+      const idx = db.whitelist.findIndex((w) => w.email === entry.email);
+      if (idx >= 0) db.whitelist[idx] = { ...db.whitelist[idx], plan: entry.plan, source: 'import' };
+      else db.whitelist.unshift(entry);
+    }
+  });
 
   await logAccess({
     id: newId('al-'),

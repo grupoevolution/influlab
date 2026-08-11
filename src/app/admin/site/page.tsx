@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Clapperboard, Crown, ExternalLink, Globe, HelpCircle, Loader2, MessageCircle, Play, Save, Sparkles } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -445,147 +445,7 @@ export default function AdminSitePage() {
             </div>
           </form>
         )}
-
-        {/* Fora do form: ação independente de otimização de mídia */}
-        <CompressVideosCard />
       </section>
     </>
-  );
-}
-
-/**
- * Card "Comprimir vídeos existentes".
- *
- * Vídeos NOVOS já são comprimidos automaticamente no upload. Este card cuida
- * do acervo antigo: processa 1 vídeo por chamada em loop (evita timeout em
- * arquivos grandes) e mostra o progresso + economia de espaço em tempo real.
- */
-function CompressVideosCard() {
-  const [pendingCount, setPendingCount] = useState<number | null>(null);
-  const [totalVideos, setTotalVideos] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [doneCount, setDoneCount] = useState(0);
-  const [log, setLog] = useState<string[]>([]);
-  const stopRef = useRef(false);
-
-  const refresh = async () => {
-    try {
-      const r = await fetch('/api/admin/media/compress', { cache: 'no-store' });
-      const j = await r.json();
-      setPendingCount(j.pendingCount ?? 0);
-      setTotalVideos(j.totalVideos ?? 0);
-    } catch {
-      setPendingCount(0);
-    }
-  };
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  const start = async () => {
-    setRunning(true);
-    stopRef.current = false;
-    setDoneCount(0);
-    setLog([]);
-    const startTotal = pendingCount ?? 0;
-
-    try {
-      // Loop: 1 vídeo por chamada até acabar (ou o admin parar)
-      // Trava de segurança: máx. startTotal + 20 iterações
-      for (let i = 0; i < startTotal + 20; i++) {
-        if (stopRef.current) break;
-        const r = await fetch('/api/admin/media/compress', { method: 'POST' });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          setLog((l) => [`⚠️ ${j.error ?? `Erro ${r.status}`}`, ...l]);
-          break;
-        }
-        const j = await r.json();
-        if (j.processed) {
-          setDoneCount((c) => c + 1);
-          if (j.processed.ok) {
-            setLog((l) => [
-              `✅ ${j.processed.file}: ${j.processed.beforeMB}MB → ${j.processed.afterMB}MB`,
-              ...l.slice(0, 19),
-            ]);
-          } else {
-            setLog((l) => [`⚠️ ${j.processed.file}: ${j.processed.error}`, ...l.slice(0, 19)]);
-          }
-        }
-        setPendingCount(j.remaining ?? 0);
-        if (j.done) break;
-      }
-    } finally {
-      setRunning(false);
-      refresh();
-    }
-  };
-
-  const progressPct =
-    running && pendingCount !== null && doneCount + pendingCount > 0
-      ? Math.round((doneCount / (doneCount + pendingCount)) * 100)
-      : 0;
-
-  return (
-    <Card variant="glass" className="p-5">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand flex items-center justify-center shrink-0">
-          <Clapperboard size={18} className="text-white" />
-        </div>
-        <div className="flex-1">
-          <h2 className="font-display font-bold text-lg leading-tight">Comprimir vídeos existentes</h2>
-          <p className="text-xs text-text-muted leading-relaxed">
-            Vídeos novos já são comprimidos automaticamente no upload. Este botão comprime o{' '}
-            <strong>acervo antigo</strong> (um por vez, pode deixar rodando). Vídeos ficam ~10x menores
-            e ganham miniatura automática — o app carrega muito mais rápido pros alunos.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 flex-wrap">
-        <Button
-          onClick={start}
-          disabled={running || pendingCount === null || pendingCount === 0}
-          leftIcon={running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-        >
-          {running
-            ? `Comprimindo... (${doneCount} feito${doneCount === 1 ? '' : 's'})`
-            : pendingCount === null
-            ? 'Verificando...'
-            : pendingCount === 0
-            ? 'Tudo comprimido ✓'
-            : `Comprimir ${pendingCount} vídeo${pendingCount === 1 ? '' : 's'}`}
-        </Button>
-        {running && (
-          <Button variant="ghost" onClick={() => { stopRef.current = true; }}>
-            Parar
-          </Button>
-        )}
-        <span className="text-[11px] text-text-subtle">
-          {totalVideos} vídeo{totalVideos === 1 ? '' : 's'} no acervo
-          {pendingCount !== null && pendingCount > 0 && ` · ${pendingCount} pendente${pendingCount === 1 ? '' : 's'}`}
-        </span>
-      </div>
-
-      {running && (
-        <div className="mt-3 h-2 rounded-full bg-bg-elevated overflow-hidden">
-          <div
-            className="h-full bg-gradient-brand transition-all duration-500"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-      )}
-
-      {log.length > 0 && (
-        <div className="mt-3 rounded-xl bg-bg-elevated border border-border p-3 max-h-40 overflow-y-auto">
-          {log.map((line, i) => (
-            <p key={i} className="text-[11px] font-mono text-text-secondary leading-relaxed">
-              {line}
-            </p>
-          ))}
-        </div>
-      )}
-    </Card>
   );
 }

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDB, logAccess, newId } from '@/lib/db';
-import { wlAdd, wlDelete } from '@/lib/db/sqlite';
+import { getDB, logAccess, mutateDB, newId } from '@/lib/db';
 import type { Plan, WhitelistEntry } from '@/lib/db/types';
 
 export const runtime = 'nodejs';
@@ -83,8 +82,11 @@ export async function POST(req: Request) {
       productRef: productId || productName,
       addedAt: new Date().toISOString(),
     };
-    // INSERT de 1 linha no SQLite — sem reescrever arquivo nenhum
-    wlAdd(entry);
+    await mutateDB((db) => {
+      const idx = db.whitelist.findIndex((w) => w.email === email);
+      if (idx >= 0) db.whitelist[idx] = { ...db.whitelist[idx], plan, source: 'webhook', platform: 'ticto' };
+      else db.whitelist.unshift(entry);
+    });
 
     await logWebhookAction('ticto', email, 'added', {
       plan,
@@ -128,7 +130,11 @@ function resolvePlan(
 
 /** Retorna true se removeu, false se o email nem existia. */
 async function removeEmail(email: string): Promise<boolean> {
-  return wlDelete(email);
+  return mutateDB((db) => {
+    const before = db.whitelist.length;
+    db.whitelist = db.whitelist.filter((w) => w.email !== email);
+    return db.whitelist.length < before;
+  });
 }
 
 async function logWebhookAction(
