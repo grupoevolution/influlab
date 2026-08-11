@@ -82,7 +82,7 @@ export async function saveVideo(buffer: Buffer, originalName: string): Promise<{
 }
 
 /** Roda ffmpeg pra comprimir. Retorna false se o binário não existir ou falhar. */
-async function transcodeVideo(input: string, output: string): Promise<boolean> {
+export async function transcodeVideo(input: string, output: string): Promise<boolean> {
   const { spawn } = await import('node:child_process');
   return new Promise((resolve) => {
     const args = [
@@ -112,7 +112,7 @@ async function transcodeVideo(input: string, output: string): Promise<boolean> {
 }
 
 /** Extrai um frame (t=0.5s) como poster webp. */
-async function generatePoster(input: string, output: string): Promise<boolean> {
+export async function generatePoster(input: string, output: string): Promise<boolean> {
   const { spawn } = await import('node:child_process');
   return new Promise((resolve) => {
     const args = ['-y', '-ss', '0.5', '-i', input, '-frames:v', '1', '-vf', "scale='min(480,iw)':-2", output];

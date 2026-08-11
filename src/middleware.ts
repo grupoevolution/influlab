@@ -18,6 +18,7 @@ const ADMIN_ONLY_PREFIXES = [
   '/api/admin/events',
   '/api/admin/integrations',
   '/api/admin/site-settings',
+  '/api/admin/media/compress',
   '/api/admin/staffs',
 ];
 
