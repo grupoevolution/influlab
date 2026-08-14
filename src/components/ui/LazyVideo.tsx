@@ -4,6 +4,7 @@ import { Play } from 'lucide-react';
 import { Component, type ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { isEmbedUrl } from '@/lib/video-embed';
+import { attachHls, isVturbUrl, resolveVturb } from '@/lib/vturb';
 
 /**
  * ===== Gerenciador global de "slots" de vídeo =====
@@ -67,8 +68,137 @@ interface LazyVideoProps {
 export function LazyVideo(props: LazyVideoProps) {
   return (
     <VideoErrorBoundary className={props.className}>
-      {isEmbedUrl(props.src) ? <LazyEmbed {...props} /> : <LazyFileVideo {...props} />}
+      {isVturbUrl(props.src) ? (
+        <LazyVturb {...props} />
+      ) : isEmbedUrl(props.src) ? (
+        <LazyEmbed {...props} />
+      ) : (
+        <LazyFileVideo {...props} />
+      )}
     </VideoErrorBoundary>
+  );
+}
+
+/**
+ * Vídeo do VTurb no grid: resolve o embed pro HLS do CDN deles e toca com o
+ * NOSSO <video> — mudo, loop perfeito, sem barra de progresso, mesmo sistema
+ * de slots dos vídeos de arquivo. Se a resolução ou a reprodução falhar,
+ * cai pro iframe do player oficial (LazyEmbed), que sempre funciona.
+ */
+function LazyVturb(props: LazyVideoProps) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <LazyEmbed {...props} />;
+  return <LazyVturbInner {...props} onFail={() => setFailed(true)} />;
+}
+
+function LazyVturbInner({
+  src,
+  poster,
+  className,
+  rootMargin = '100px',
+  onFail,
+}: LazyVideoProps & { onFail: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [inView, setInView] = useState(false);
+  const [resolvedPoster, setResolvedPoster] = useState<string | undefined>();
+
+  // Observa visibilidade (mesmo padrão dos outros)
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => setInView(entries[0]?.isIntersecting ?? false),
+      { rootMargin, threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rootMargin]);
+
+  // Poster cedo: assim que aparece na tela, resolve (1 fetch cacheado por URL)
+  // pra capa do vídeo aparecer mesmo antes de ganhar slot de reprodução.
+  useEffect(() => {
+    if (!inView || poster) return;
+    let alive = true;
+    resolveVturb(src).then((info) => {
+      if (alive && info?.poster) setResolvedPoster(info.poster);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [inView, src, poster]);
+
+  // Reprodução: visível + slot → resolve HLS e toca; sai da tela → descarrega.
+  useEffect(() => {
+    if (!inView || !src) return;
+
+    let granted = false;
+    let disposed = false;
+    let cleanupHls: (() => void) | null = null;
+
+    const ticket = requestSlot(() => {
+      granted = true;
+      if (disposed) {
+        releaseSlot();
+        return;
+      }
+      (async () => {
+        const info = await resolveVturb(src);
+        if (disposed) return;
+        if (!info) {
+          onFail();
+          return;
+        }
+        const el = videoRef.current;
+        if (!el) return;
+        try {
+          cleanupHls = await attachHls(el, info.hls);
+          if (disposed) {
+            // Slot já foi devolvido enquanto o hls.js carregava
+            cleanupHls();
+            cleanupHls = null;
+            return;
+          }
+          const p = el.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch {
+          onFail();
+        }
+      })();
+    });
+
+    return () => {
+      disposed = true;
+      if (granted) {
+        const el = videoRef.current;
+        if (el) el.pause();
+        cleanupHls?.();
+        cleanupHls = null;
+        if (el) {
+          el.removeAttribute('src');
+          try {
+            el.load();
+          } catch {
+            /* ignore */
+          }
+        }
+        releaseSlot();
+      } else {
+        ticket.cancelled = true;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, src]);
+
+  return (
+    <video
+      ref={videoRef}
+      poster={poster || resolvedPoster}
+      muted
+      loop
+      playsInline
+      preload="none"
+      className={cn('h-full w-full object-cover', className)}
+    />
   );
 }
 

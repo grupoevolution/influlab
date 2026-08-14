@@ -5,6 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { isEmbedUrl } from '@/lib/video-embed';
+import { isVturbUrl } from '@/lib/vturb';
+import { VturbAutoVideo } from '@/components/ui/VturbVideo';
 import type { ViralVideoDB as ViralVideo } from '@/lib/db/types';
 
 export function ViralModal({ video, open, onClose }: { video: ViralVideo | null; open: boolean; onClose: () => void }) {
@@ -20,7 +22,11 @@ export function ViralModal({ video, open, onClose }: { video: ViralVideo | null;
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Vídeo — arquivo direto OU player embutido (VTurb/YouTube/Vimeo) */}
         <div className="relative aspect-[9/16] md:aspect-auto md:min-h-[600px] bg-bg-elevated overflow-hidden">
-          {embed ? (
+          {isVturbUrl(video.videoUrl) ? (
+            <div className="absolute inset-0">
+              <VturbAutoVideo src={video.videoUrl} poster={video.thumb} title={video.title} />
+            </div>
+          ) : embed ? (
             <iframe
               src={video.videoUrl}
               title={video.title}
