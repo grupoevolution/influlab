@@ -1,8 +1,9 @@
 'use client';
 
-import { Loader2, Upload, X } from 'lucide-react';
+import { Film, Loader2, Upload, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { isEmbedUrl } from '@/lib/video-embed';
 
 type Kind = 'image' | 'video';
 
@@ -66,6 +67,7 @@ export function MediaUpload({
   };
 
   const isVideo = value?.toLowerCase().match(/\.(mp4|webm|mov|m4v)$/);
+  const isEmbed = !!value && isEmbedUrl(value);
 
   return (
     <div className={className}>
@@ -79,7 +81,12 @@ export function MediaUpload({
         {/* Preview */}
         {value ? (
           <div className="relative group shrink-0">
-            {isVideo ? (
+            {isEmbed ? (
+              <div className="h-24 w-24 rounded-xl bg-bg-elevated border border-brand-cyan-400/40 flex flex-col items-center justify-center gap-1 text-center px-1">
+                <Film size={18} className="text-brand-cyan-300" />
+                <span className="text-[9px] text-text-muted leading-tight">Player externo (VTurb/embed)</span>
+              </div>
+            ) : isVideo ? (
               <video
                 src={value}
                 className="h-24 w-24 rounded-xl object-cover bg-bg-elevated border border-border"

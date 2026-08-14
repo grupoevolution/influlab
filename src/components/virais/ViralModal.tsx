@@ -4,6 +4,7 @@ import { ExternalLink, Eye, Flame, Play, Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { isEmbedUrl } from '@/lib/video-embed';
 import type { ViralVideoDB as ViralVideo } from '@/lib/db/types';
 
 export function ViralModal({ video, open, onClose }: { video: ViralVideo | null; open: boolean; onClose: () => void }) {
@@ -12,22 +13,35 @@ export function ViralModal({ video, open, onClose }: { video: ViralVideo | null;
   // Defesa: campos opcionais que podem vir undefined quando o item é criado sem preencher tudo
   const instructions = Array.isArray(video.instructions) ? video.instructions : [];
   const promptText = video.prompt ?? '';
+  const embed = isEmbedUrl(video.videoUrl);
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <div className="grid grid-cols-1 md:grid-cols-2">
-        {/* Vídeo */}
+        {/* Vídeo — arquivo direto OU player embutido (VTurb/YouTube/Vimeo) */}
         <div className="relative aspect-[9/16] md:aspect-auto md:min-h-[600px] bg-bg-elevated overflow-hidden">
-          <video
-            src={video.videoUrl}
-            poster={video.thumb}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-card/80 via-transparent to-transparent" />
+          {embed ? (
+            <iframe
+              src={video.videoUrl}
+              title={video.title}
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 h-full w-full border-0"
+            />
+          ) : (
+            <>
+              <video
+                src={video.videoUrl}
+                poster={video.thumb}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-bg-card/80 via-transparent to-transparent pointer-events-none" />
+            </>
+          )}
 
           <div className="absolute top-4 left-4 flex items-center gap-2">
             <Badge variant="live">

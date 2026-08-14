@@ -12,9 +12,23 @@
 export type VideoEmbed =
   | { kind: 'native'; src: string }
   | { kind: 'youtube'; src: string }
-  | { kind: 'vimeo'; src: string };
+  | { kind: 'vimeo'; src: string }
+  | { kind: 'iframe'; src: string };
 
 const NATIVE_EXT = /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i;
+
+/**
+ * URL de PLAYER EMBUTIDO (iframe) — não é arquivo de vídeo.
+ * Cobre VTurb/ConverteAI (scripts.converteai.net/.../embed.html), YouTube,
+ * Vimeo e qualquer URL terminada em /embed ou embed.html.
+ * Um <video> não toca essas URLs; precisam de <iframe>.
+ */
+export function isEmbedUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  const u = url.trim();
+  if (!u || NATIVE_EXT.test(u)) return false;
+  return /converteai\.net|vturb|youtube\.com|youtu\.be|vimeo\.com|\/embed(\.html)?([?#]|$)/i.test(u);
+}
 
 export function parseVideoUrl(url: string | undefined | null): VideoEmbed | null {
   if (!url) return null;
@@ -44,7 +58,12 @@ export function parseVideoUrl(url: string | undefined | null): VideoEmbed | null
     };
   }
 
-  // 4) Outro? Tenta nativo mesmo assim (pode ser stream proxied)
+  // 4) Player embutido genérico (VTurb/ConverteAI etc.)
+  if (isEmbedUrl(u)) {
+    return { kind: 'iframe', src: u };
+  }
+
+  // 5) Outro? Tenta nativo mesmo assim (pode ser stream proxied)
   try {
     new URL(u); // valida URL
     return { kind: 'native', src: u };

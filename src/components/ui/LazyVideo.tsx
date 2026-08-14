@@ -1,7 +1,9 @@
 'use client';
 
+import { Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { isEmbedUrl } from '@/lib/video-embed';
 
 /**
  * ===== Gerenciador global de "slots" de vídeo =====
@@ -55,7 +57,92 @@ interface LazyVideoProps {
 }
 
 /**
- * Vídeo leve para grids:
+ * Vídeo leve para grids. Aceita DOIS tipos de fonte:
+ * - Arquivo de vídeo (mp4/webm...) → <video> com slot/descarregamento (abaixo).
+ * - PLAYER EMBUTIDO (VTurb/ConverteAI, YouTube, Vimeo, .../embed.html) →
+ *   <iframe> preguiçoso: só monta quando visível + slot, desmonta ao sair
+ *   da tela (destrói o player e libera a memória). Um escudo transparente
+ *   preserva o clique do card (ex: abrir o modal do viral).
+ */
+export function LazyVideo(props: LazyVideoProps) {
+  if (isEmbedUrl(props.src)) return <LazyEmbed {...props} />;
+  return <LazyFileVideo {...props} />;
+}
+
+function LazyEmbed({ src, poster, className, rootMargin = '100px' }: LazyVideoProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => setInView(entries[0]?.isIntersecting ?? false),
+      { rootMargin, threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rootMargin]);
+
+  useEffect(() => {
+    if (!inView) return;
+    let granted = false;
+    let disposed = false;
+    const ticket = requestSlot(() => {
+      granted = true;
+      if (disposed) {
+        releaseSlot();
+        return;
+      }
+      setActive(true);
+    });
+    return () => {
+      disposed = true;
+      if (granted) {
+        setActive(false); // desmonta o iframe → player destruído, memória liberada
+        releaseSlot();
+      } else {
+        ticket.cancelled = true;
+      }
+    };
+  }, [inView, src]);
+
+  return (
+    <div ref={ref} className={cn('relative h-full w-full overflow-hidden bg-bg-elevated', className)}>
+      {/* Poster/placeholder enquanto o player não está ativo */}
+      {poster ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        !active && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
+              <Play size={18} className="text-white/70 ml-0.5" fill="currentColor" />
+            </div>
+          </div>
+        )
+      )}
+
+      {active && (
+        <iframe
+          src={src}
+          title="Vídeo"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full border-0"
+        />
+      )}
+
+      {/* Escudo de clique: o toque no card continua indo pro card (abrir modal),
+          não pro player. O preview é visual. */}
+      <div className="absolute inset-0" aria-hidden="true" />
+    </div>
+  );
+}
+
+/**
+ * Arquivo de vídeo para grids:
  * - preload="none": nunca baixa nada sozinho.
  * - Só recebe src quando está visível E ganha um slot (máx 3 simultâneos).
  * - Ao sair da tela: pausa, REMOVE o src e chama load() — libera memória/decoder.
@@ -64,7 +151,7 @@ interface LazyVideoProps {
  * Nada disso usa estado do React durante o play/unload (só DOM direto), então
  * o custo de re-render é zero e a thread principal fica livre pros cliques.
  */
-export function LazyVideo({ src, poster, className, rootMargin = '100px' }: LazyVideoProps) {
+function LazyFileVideo({ src, poster, className, rootMargin = '100px' }: LazyVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [inView, setInView] = useState(false);
 
