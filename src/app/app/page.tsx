@@ -26,9 +26,7 @@ import {
   UpcomingEvents,
 } from '@/components/home/DailyHighlights';
 import { CalculatorTeaser } from '@/components/home/CalculatorTeaser';
-import { HeroCarousel } from '@/components/home/HeroCarousel';
 import { VideoPlayer } from '@/components/ui/VideoPlayer';
-import { useHeroGallery } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -47,46 +45,23 @@ const accentMap = {
   emerald: { glow: 'group-hover:shadow-[0_0_40px_rgba(16,185,129,0.25)]', icon: 'text-emerald-300', bg: 'from-emerald-500/20 to-emerald-400/5', dot: 'bg-emerald-400' },
 };
 
-// Fallback: vídeo de fundo único quando a Galeria do admin estiver vazia.
-const HERO_FALLBACK_VIDEO_URL = 'https://cdn.coverr.co/videos/coverr-a-girl-with-pink-hair-looking-at-the-camera-2569/1080p.mp4';
-
 export default function AppHomePage() {
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const { data: heroItems } = useHeroGallery();
-  const hasGallery = (heroItems?.length ?? 0) > 0;
 
   return (
     <div>
-      {/* HERO — carrossel de vídeos da galeria OU vídeo único como fallback */}
-      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center overflow-hidden">
+      {/*
+       * HERO 100% ESTÁTICO — decisão de eficiência (não reverter sem medir):
+       * a primeira tela é o cartão de visitas do app em live e em 4G fraco.
+       * Antes tinha carrossel de vídeos (vários MB) ou um vídeo externo 1080p
+       * de fallback. Agora: só gradientes CSS da marca — zero download de
+       * mídia, pinta instantâneo em qualquer celular.
+       */}
+      <section className="relative min-h-[50vh] md:min-h-[70vh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          {hasGallery ? (
-            <HeroCarousel />
-          ) : (
-            <video
-              src={HERO_FALLBACK_VIDEO_URL}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
-          {/* Vinheta + gradientes que garantem legibilidade do título sobre o carrossel */}
-          {hasGallery ? (
-            <>
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_30%_60%,rgba(7,9,18,0.85)_0%,rgba(7,9,18,0.55)_50%,transparent_80%)]" />
-              <div className="absolute inset-0 bg-gradient-to-b from-bg/40 via-bg/10 to-bg" />
-            </>
-          ) : (
-            <>
-              <div className="absolute inset-0 bg-bg/85" />
-              <div className="absolute inset-0 bg-gradient-to-b from-bg/80 via-bg/60 to-bg" />
-              <div className="absolute inset-0 bg-gradient-mesh opacity-70" />
-              <div className="absolute inset-0 noise-overlay" />
-            </>
-          )}
+          <div className="absolute inset-0 bg-gradient-mesh opacity-80" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_30%_60%,rgba(7,9,18,0.6)_0%,transparent_80%)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-bg/60 via-bg/20 to-bg" />
         </div>
 
         {/* Circuit decor */}
