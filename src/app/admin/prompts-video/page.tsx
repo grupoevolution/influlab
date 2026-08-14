@@ -7,8 +7,7 @@ import type { VideoPromptDB } from '@/lib/db/types';
 const fields: FieldDef[] = [
   { name: 'title', label: 'Título', type: 'text', required: true },
   { name: 'videoUrl', label: 'Vídeo de exemplo (mp4/webm)', type: 'media-video', required: true,
-    helper: 'Vídeo curto vertical que aparece em loop sem som no card.' },
-  { name: 'thumb', label: 'Thumbnail fallback (opcional)', type: 'media-image' },
+    helper: 'Vídeo curto vertical que aparece em loop sem som no card. A capa (1º frame) é gerada automaticamente no upload.' },
   { name: 'category', label: 'Categoria', type: 'text',
     helper: 'Categoria livre. Ex: UGC, Antes/Depois, Beleza...' },
   { name: 'promptFlow', label: 'Prompt para o Flow', type: 'textarea',

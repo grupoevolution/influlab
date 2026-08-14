@@ -228,3 +228,20 @@ export function withModelPrompt(basePrompt: string, model: Model | null): string
   const persona = buildModelPrompt(model);
   return `PERSONAGEM: ${persona}\n\nCENA: ${basePrompt}`;
 }
+
+/**
+ * Lê o modelo ativo DIRETO do localStorage, sem hook/assinatura.
+ *
+ * Por quê (performance): o CopyButton usava useModels() — cada instância
+ * criava 3 event listeners + lia/parseava o localStorage na montagem. Num
+ * grid com 24-48 botões isso somava ~150 listeners e dezenas de parses SÓ
+ * pra montar a página, segurando a thread principal em celular fraco
+ * (cliques mortos até terminar). Ler sob demanda no CLIQUE custa ~0 e o
+ * valor está sempre fresco.
+ */
+export function getActiveModel(): Model | null {
+  if (typeof window === 'undefined') return null;
+  const id = readActive();
+  if (!id) return null;
+  return read().find((m) => m.id === id) ?? null;
+}

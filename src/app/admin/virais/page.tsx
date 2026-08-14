@@ -8,7 +8,6 @@ const fields: FieldDef[] = [
   { name: 'title', label: 'Título', type: 'text', required: true },
   { name: 'videoUrl', label: 'Vídeo viral (mp4/webm)', type: 'media-video', required: true,
     helper: 'Vídeo curto vertical que roda em loop no card e no modal.' },
-  { name: 'thumb', label: 'Thumbnail fallback', type: 'media-image' },
   { name: 'tiktokUrl', label: 'URL do vídeo original no TikTok', type: 'url',
     helper: 'Aparece como botão "Abrir no TikTok" pro aluno ir direto no vídeo original. Opcional.' },
   { name: 'category', label: 'Categoria', type: 'text', required: true,

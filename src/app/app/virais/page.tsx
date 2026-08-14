@@ -74,7 +74,7 @@ export default function ViraisPage() {
               <button
                 key={v.id}
                 onClick={() => setSelected(v)}
-                className="block text-left group"
+                className="block text-left group [content-visibility:auto] [contain-intrinsic-size:auto_460px]"
               >
                 <Card variant="default" hoverable className="overflow-hidden">
                   <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">

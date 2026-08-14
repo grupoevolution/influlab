@@ -83,7 +83,7 @@ export default function BancoVideosPage() {
               const flowText = v.promptFlow || v.prompt || '';
               const createText = v.promptCreate || v.prompt || '';
               return (
-                <div key={v.id}>
+                <div key={v.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_520px]">
                   <Card variant="default" hoverable className="overflow-hidden">
                     <div className="relative aspect-[9/16] bg-bg-elevated overflow-hidden">
                       <LazyVideo

@@ -74,7 +74,7 @@ export default function BancoImagensPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid gap-3 md:gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {visible.map((img) => (
-              <div key={img.id}>
+              <div key={img.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_400px]">
                 <Card variant="default" hoverable className="overflow-hidden">
                   <div className="relative aspect-square overflow-hidden bg-bg-elevated">
                     <ThumbImg
