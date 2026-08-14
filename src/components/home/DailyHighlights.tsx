@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { LazyVideo } from '@/components/ui/LazyVideo';
+import { ThumbImg } from '@/components/ui/ThumbImg';
 import { useAnnouncement, useProducts, useUpcomingEvents, useVirals } from '@/lib/api/client';
 import type { UpcomingEventDB } from '@/lib/db/types';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -109,7 +110,7 @@ export function DailyDrop() {
   // Drop = produto #1 do ranking (maior receita)
   const drop = [...products].sort((a, b) => (b.revenueEstimate ?? 0) - (a.revenueEstimate ?? 0))[0];
   if (!drop) return null;
-  const dropImg = drop.image || drop.coverImage;
+  const dropImg = drop.image || drop.coverImage || '';
 
   return (
     <section className="px-4 md:px-8 pt-6 md:pt-8">
@@ -137,11 +138,10 @@ export function DailyDrop() {
           <Card variant="glass" hoverable className="overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="relative aspect-[4/3] md:aspect-auto md:min-h-[280px] bg-bg-elevated overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <ThumbImg
                   src={dropImg}
                   alt={drop.name}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-bg-card via-bg-card/30 to-transparent" />
 

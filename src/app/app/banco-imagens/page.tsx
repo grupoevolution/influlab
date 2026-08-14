@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { ThumbImg } from '@/components/ui/ThumbImg';
 import { useImagePrompts } from '@/lib/api/client';
 import { useIncremental } from '@/lib/use-incremental';
 import { cn } from '@/lib/utils';
@@ -47,7 +48,7 @@ export default function BancoImagensPage() {
       />
 
       {cats.length > 1 && (
-        <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg/80 backdrop-blur-xl">
+        <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg md:bg-bg/80 md:backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
               {cats.map((c) => (
@@ -76,12 +77,9 @@ export default function BancoImagensPage() {
               <div key={img.id}>
                 <Card variant="default" hoverable className="overflow-hidden">
                   <div className="relative aspect-square overflow-hidden bg-bg-elevated">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ThumbImg
                       src={img.image}
                       alt={img.title}
-                      loading="lazy"
-                      decoding="async"
                       className="absolute inset-0 h-full w-full object-cover"
                     />
                     <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1 pointer-events-none">

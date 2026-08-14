@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Clapperboard, Crown, ExternalLink, Globe, HelpCircle, Loader2, MessageCircle, Play, Save, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -445,7 +445,133 @@ export default function AdminSitePage() {
             </div>
           </form>
         )}
+
+        {/* Fora do form: otimização do acervo de mídia */}
+        <OptimizeMediaCard />
       </section>
     </>
+  );
+}
+
+/**
+ * Card "Otimizar mídias existentes".
+ *
+ * Uploads novos já saem comprimidos (vídeo) e com miniatura (imagem).
+ * Este card cuida do ACERVO antigo: comprime 1 vídeo por chamada (10-20x
+ * menor) e gera miniaturas de imagem em lotes de 20, em loop com progresso.
+ * É a alavanca nº 1 contra a lentidão em live: menos MB saindo da VPS.
+ */
+function OptimizeMediaCard() {
+  const [pending, setPending] = useState<{ videos: number; images: number } | null>(null);
+  const [totals, setTotals] = useState({ videos: 0, images: 0 });
+  const [running, setRunning] = useState(false);
+  const [doneCount, setDoneCount] = useState(0);
+  const [log, setLog] = useState<string[]>([]);
+  const stopRef = useRef(false);
+
+  const refresh = async () => {
+    try {
+      const r = await fetch('/api/admin/media/compress', { cache: 'no-store' });
+      const j = await r.json();
+      setPending({ videos: j.pendingVideos ?? 0, images: j.pendingImages ?? 0 });
+      setTotals({ videos: j.totalVideos ?? 0, images: j.totalImages ?? 0 });
+    } catch {
+      setPending({ videos: 0, images: 0 });
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const totalPending = (pending?.videos ?? 0) + (pending?.images ?? 0);
+
+  const start = async () => {
+    setRunning(true);
+    stopRef.current = false;
+    setDoneCount(0);
+    setLog([]);
+    const cap = totalPending + 30;
+
+    try {
+      for (let i = 0; i < cap; i++) {
+        if (stopRef.current) break;
+        const r = await fetch('/api/admin/media/compress', { method: 'POST' });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          setLog((l) => [`⚠️ ${j.error ?? `Erro ${r.status}`}`, ...l]);
+          break;
+        }
+        const j = await r.json();
+        for (const p of j.processed ?? []) {
+          setDoneCount((c) => c + 1);
+          if (p.kind === 'video' && p.ok) {
+            setLog((l) => [`✅ ${p.file}: ${p.beforeMB}MB → ${p.afterMB}MB`, ...l.slice(0, 19)]);
+          } else if (p.kind === 'video') {
+            setLog((l) => [`⚠️ ${p.file}: ${p.error}`, ...l.slice(0, 19)]);
+          } else if (p.kind === 'thumbs') {
+            setLog((l) => [`🖼️ ${p.count} miniatura${p.count === 1 ? '' : 's'} de imagem gerada${p.count === 1 ? '' : 's'}`, ...l.slice(0, 19)]);
+          }
+        }
+        setPending((prev) => prev); // atualizado abaixo
+        if (j.done) break;
+        await refresh();
+      }
+    } finally {
+      setRunning(false);
+      refresh();
+    }
+  };
+
+  return (
+    <Card variant="glass" className="p-5">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="h-10 w-10 rounded-xl bg-gradient-brand shadow-glow-brand flex items-center justify-center shrink-0">
+          <Clapperboard size={18} className="text-white" />
+        </div>
+        <div className="flex-1">
+          <h2 className="font-display font-bold text-lg leading-tight">Otimizar mídias existentes</h2>
+          <p className="text-xs text-text-muted leading-relaxed">
+            Uploads novos já saem otimizados. Este botão trata o <strong>acervo antigo</strong>:
+            comprime vídeos (~10-20x menores) e gera miniaturas das imagens pros cards.
+            É o que faz o app voar em 4G fraco e aguentar live cheia.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          onClick={start}
+          disabled={running || pending === null || totalPending === 0}
+          leftIcon={running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+        >
+          {running
+            ? `Otimizando... (${doneCount} feito${doneCount === 1 ? '' : 's'})`
+            : pending === null
+            ? 'Verificando...'
+            : totalPending === 0
+            ? 'Tudo otimizado ✓'
+            : `Otimizar ${pending.videos} vídeo${pending.videos === 1 ? '' : 's'} + ${pending.images} imagem${pending.images === 1 ? '' : 's'}`}
+        </Button>
+        {running && (
+          <Button variant="ghost" onClick={() => { stopRef.current = true; }}>
+            Parar
+          </Button>
+        )}
+        <span className="text-[11px] text-text-subtle">
+          Acervo: {totals.videos} vídeos · {totals.images} imagens
+        </span>
+      </div>
+
+      {log.length > 0 && (
+        <div className="mt-3 rounded-xl bg-bg-elevated border border-border p-3 max-h-40 overflow-y-auto">
+          {log.map((line, i) => (
+            <p key={i} className="text-[11px] font-mono text-text-secondary leading-relaxed">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

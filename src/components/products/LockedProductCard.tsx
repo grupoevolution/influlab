@@ -4,6 +4,7 @@ import { Crown, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { ThumbImg } from '@/components/ui/ThumbImg';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { AdProduct } from '@/lib/db/types';
 
@@ -46,8 +47,7 @@ export function LockedProductCard({
             {/* Imagem real do produto, mas embaçada */}
             {img ? (
               <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <ThumbImg
                   src={img}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover scale-110 select-none pointer-events-none"

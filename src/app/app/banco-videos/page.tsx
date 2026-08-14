@@ -54,7 +54,7 @@ export default function BancoVideosPage() {
 
       {/* Filtros */}
       {cats.length > 1 && (
-        <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg/80 backdrop-blur-xl">
+        <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg md:bg-bg/80 md:backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
               {cats.map((c) => (

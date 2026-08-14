@@ -23,8 +23,9 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DATA_DIR=/app/data
 
-# libc6-compat sozinho basta — o sharp já vem com seu vips embutido (@img/sharp-libvips-linuxmusl-*)
-RUN apk add --no-cache libc6-compat
+# libc6-compat: sharp (vips embutido). ffmpeg: compressão de vídeo no UPLOAD
+# (roda só quando o admin sobe/otimiza mídia — nunca no boot nem em requests).
+RUN apk add --no-cache libc6-compat ffmpeg
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs

@@ -47,7 +47,7 @@ export default function ViraisPage() {
       />
 
       {cats.length > 1 && (
-        <div className="px-4 md:px-8 py-5 border-b border-border-subtle sticky top-16 z-20 bg-bg/80 backdrop-blur-xl">
+        <div className="px-4 md:px-8 py-5 border-b border-border-subtle sticky top-16 z-20 bg-bg md:bg-bg/80 md:backdrop-blur-xl">
           <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto scrollbar-hide">
             {cats.map((c) => (
               <button

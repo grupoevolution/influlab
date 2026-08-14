@@ -9,6 +9,7 @@ import { ProductModal } from '@/components/products/ProductModal';
 import { LockedProductCard } from '@/components/products/LockedProductCard';
 import { UpgradeProModal } from '@/components/products/UpgradeProModal';
 import { useProducts } from '@/lib/api/client';
+import { ThumbImg } from '@/components/ui/ThumbImg';
 import { useStudentSession } from '@/lib/student-session';
 import { useIncremental } from '@/lib/use-incremental';
 import type { AdProduct } from '@/lib/db/types';
@@ -96,7 +97,7 @@ export default function ProdutosCampeoesPage() {
       />
 
       {/* Filtros */}
-      <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg/80 backdrop-blur-xl">
+      <div className="border-b border-border-subtle sticky top-16 z-20 bg-bg md:bg-bg/80 md:backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-hide items-center">
             {sorts.map((s) => {
@@ -182,20 +183,17 @@ export default function ProdutosCampeoesPage() {
               // Ranking calculado: posição dele na lista ATUAL (visible é prefixo
               // da filtered ordenada, então i + 1 continua sendo o rank global)
               const rankingPosition = i + 1;
-              const img = product.image || product.coverImage;
+              const img = product.image || product.coverImage || '';
 
               return (
                 <div key={product.id}>
                   <button onClick={() => handleProductClick(product)} className="block w-full text-left group">
                     <Card variant="default" hoverable className="overflow-hidden">
                       <div className="relative aspect-[4/5] overflow-hidden bg-bg-elevated">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <ThumbImg
                           src={img}
                           alt={product.name}
-                          loading="lazy"
-                          decoding="async"
-                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          className="absolute inset-0 h-full w-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-bg-card/20 to-transparent pointer-events-none" />
 

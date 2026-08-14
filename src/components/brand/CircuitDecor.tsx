@@ -1,15 +1,20 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 /**
  * Decoração de linhas de circuito animadas (puxando da identidade da logo).
  * Usar como overlay decorativo em hero/cards grandes.
+ *
+ * PERFORMANCE MOBILE: animações SVG infinitas custam CPU em Android fraco.
+ * O componente inteiro só renderiza em desktop (md+) — no mobile o hero
+ * mantém os gradientes de fundo, que são estáticos e baratos.
  */
 export function CircuitDecor({ className }: { className?: string }) {
   return (
     <svg
-      className={className}
+      className={cn('hidden md:block', className)}
       viewBox="0 0 800 400"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
