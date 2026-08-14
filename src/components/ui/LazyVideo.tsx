@@ -1,7 +1,7 @@
 'use client';
 
 import { Play } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Component, type ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { isEmbedUrl } from '@/lib/video-embed';
 
@@ -65,8 +65,46 @@ interface LazyVideoProps {
  *   preserva o clique do card (ex: abrir o modal do viral).
  */
 export function LazyVideo(props: LazyVideoProps) {
-  if (isEmbedUrl(props.src)) return <LazyEmbed {...props} />;
-  return <LazyFileVideo {...props} />;
+  return (
+    <VideoErrorBoundary className={props.className}>
+      {isEmbedUrl(props.src) ? <LazyEmbed {...props} /> : <LazyFileVideo {...props} />}
+    </VideoErrorBoundary>
+  );
+}
+
+/**
+ * REGRA DE OURO: um card de vídeo com problema NUNCA pode derrubar a página
+ * inteira (o aluno via "Application error" e a tela toda morria). Qualquer
+ * erro de renderização aqui dentro vira um placeholder inofensivo só naquele
+ * card; o resto do grid continua funcionando.
+ */
+class VideoErrorBoundary extends Component<
+  { children: ReactNode; className?: string },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <div
+          className={cn(
+            'relative h-full w-full bg-bg-elevated flex items-center justify-center',
+            this.props.className,
+          )}
+        >
+          <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
+            <Play size={18} className="text-white/70 ml-0.5" fill="currentColor" />
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function LazyEmbed({ src, poster, className, rootMargin = '100px' }: LazyVideoProps) {
@@ -158,8 +196,10 @@ function LazyFileVideo({ src, poster, className, rootMargin = '100px' }: LazyVid
   // Convenção: vídeos otimizados ganham um poster automático em
   // `<arquivo>.poster.webp`. Sem thumb manual, usamos ele. Se o arquivo
   // não existir (vídeo antigo ainda não otimizado), o 404 é inofensivo.
+  // `src` pode chegar vazio/undefined se um item foi salvo sem vídeo — não
+  // pode explodir a página por causa disso.
   const effectivePoster =
-    poster || (src.startsWith('/api/media/') ? `${src}.poster.webp` : undefined);
+    poster || (src?.startsWith('/api/media/') ? `${src}.poster.webp` : undefined);
 
   // Observa visibilidade
   useEffect(() => {
@@ -176,7 +216,7 @@ function LazyFileVideo({ src, poster, className, rootMargin = '100px' }: LazyVid
   // Liga/desliga a mídia conforme visibilidade + slot disponível
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || !inView) return;
+    if (!el || !inView || !src) return;
 
     let granted = false;
     let disposed = false;
